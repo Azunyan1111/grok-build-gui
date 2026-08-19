@@ -70,9 +70,12 @@ spread during refactors.
 
 ## Safety (two layers)
 1. **App permissions** (hooks/rules/mode) → may `request_permission` → **GUI must implement**.
-2. **OS sandbox** (optional, default off): Seatbelt/Landlock; hard EPERM; **no human grant callback**.
+2. **OS sandbox**: Seatbelt/Landlock; hard EPERM; **no human grant callback**.
 
-YOLO / no-sandbox / non-localhost serve: explicit + visible.
+- Default profile: workspace sandbox + automatic approval of routine actions.
+- Full access means both no sandbox and always-approve; it is explicit and visible.
+- A loaded GUI session owns one Grok process because cwd and sandbox are fixed
+  at process startup. Changing sandbox level therefore starts with a new chat.
 
 ## Compat
 - Probe: path → version → ACP `initialize` → actionable errors.

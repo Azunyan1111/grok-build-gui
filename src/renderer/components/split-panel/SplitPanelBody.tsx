@@ -9,6 +9,7 @@ import type { OpenFileViewRequest } from "../chat/FileChangeBar";
 import type { ModelState, PermissionMode } from "../../../electron/preload";
 import type { LocalSession } from "../../types/chat";
 import type { QueuedPrompt } from "../../types/promptQueue";
+import type { KeyboardShortcut } from "../../lib/keyboardShortcut";
 import type { SplitTab, SplitTool } from "./types";
 import { useTranslation } from "react-i18next";
 
@@ -27,6 +28,8 @@ type Props = {
   permissionMode: PermissionMode;
   slashRefreshKey?: number;
   voiceSttLanguage?: string;
+  screenshotShortcut?: KeyboardShortcut;
+  voiceShortcut?: KeyboardShortcut;
   onSubmitSideTask?: SideTaskSubmit;
   onCancelSideTask?: (sessionId: string) => void;
   onSendNowSideTask?: (id: string) => void;
@@ -55,6 +58,8 @@ export function SplitPanelBody({
   permissionMode,
   slashRefreshKey,
   voiceSttLanguage,
+  screenshotShortcut,
+  voiceShortcut,
   onSubmitSideTask,
   onCancelSideTask,
   onSendNowSideTask,
@@ -110,6 +115,8 @@ export function SplitPanelBody({
           permissionMode={permissionMode}
           slashRefreshKey={slashRefreshKey}
           voiceSttLanguage={voiceSttLanguage}
+          screenshotShortcut={screenshotShortcut}
+          voiceShortcut={voiceShortcut}
           onSubmit={onSubmitSideTask ?? (() => undefined)}
           onCancel={onCancelSideTask ?? (() => undefined)}
           onSendNowQueued={onSendNowSideTask}

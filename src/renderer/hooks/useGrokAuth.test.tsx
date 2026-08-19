@@ -49,4 +49,36 @@ describe("useGrokAuth guest mode", () => {
     expect(second.result.current.skippedLogin).toBe(true);
     second.unmount();
   });
+
+  it("shares one authorization request across concurrent login clicks", async () => {
+    let completeLogin!: (value: {
+      ok: boolean;
+      account: GrokAccount;
+    }) => void;
+    const loginGrok = vi.fn(
+      () =>
+        new Promise<{ ok: boolean; account: GrokAccount }>((resolve) => {
+          completeLogin = resolve;
+        }),
+    );
+    Object.assign(window.grok!, { loginGrok });
+    const hook = renderHook(() => useGrokAuth());
+    await waitFor(() => expect(hook.result.current.loading).toBe(false));
+
+    let first!: Promise<unknown>;
+    let second!: Promise<unknown>;
+    act(() => {
+      first = hook.result.current.login();
+      second = hook.result.current.login();
+    });
+
+    expect(first).toBe(second);
+    expect(loginGrok).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      completeLogin({ ok: true, account: { ...guestAccount, loggedIn: true } });
+      await first;
+    });
+    hook.unmount();
+  });
 });

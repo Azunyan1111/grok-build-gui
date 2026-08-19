@@ -1684,9 +1684,16 @@ export class SessionManager {
     const params: {
       sessionId: string;
       sourcePath: string;
+      worktreeType: "linked";
       label?: string;
       gitRef?: string;
-    } = { sessionId, sourcePath };
+    } = {
+      sessionId,
+      sourcePath,
+      // Keep GUI sessions lightweight even when Grok's local or remote default
+      // is configured as a standalone repository copy.
+      worktreeType: "linked",
+    };
     const label = options.label?.trim();
     const gitRef = options.gitRef?.trim();
     if (label) params.label = label;

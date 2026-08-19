@@ -34,6 +34,15 @@ import { WorkspacePicker, type WorkspaceProps } from "./WorkspacePicker";
 import { WorktreeBar, type WorktreeBarProps } from "./WorktreeBar";
 import { useTranslation } from "react-i18next";
 import { ComposerImageAttachment } from "./ComposerImageAttachment";
+import {
+  DEFAULT_VOICE_SHORTCUT,
+  formatShortcut,
+  isModifierOnlyShortcut,
+  keyboardEventMatchesShortcut,
+  keyboardEventReleasesShortcut,
+  type KeyboardShortcut,
+} from "../../lib/keyboardShortcut";
+import { detectHostPlatform } from "../../lib/platform";
 
 export type ComposerProps = {
   value: string;
@@ -91,6 +100,12 @@ export type ComposerProps = {
    * Resolved CLI-style in the main process before the API call.
    */
   voiceSttLanguage?: string;
+  /** App-focused region capture shortcut. Empty disables it. */
+  screenshotShortcut?: KeyboardShortcut;
+  /** App-focused push-to-talk shortcut. Empty disables it. */
+  voiceShortcut?: KeyboardShortcut;
+  /** Receives shortcuts when focus is not inside another composer. */
+  primaryShortcutTarget?: boolean;
 };
 
 function formatSize(bytes?: number): string {
@@ -104,7 +119,7 @@ function formatSize(bytes?: number): string {
  * Voice (console-aligned):
  * - Mic click: toggle recording. Live text → input. Mic again = stop keep text.
  * - Enter while recording: stop + send.
- * - Hold Left ⌥: record while held; release = stop keep text.
+ * - Hold the configured voice shortcut: record; release = stop keep text.
  * Both stream partials into the composer while speaking.
  */
 /** Wait before Option-hold starts dictation (avoids Option+letter diacritics). */
@@ -147,8 +162,14 @@ export function Composer({
   onConfigureModels,
   contextUsage,
   voiceSttLanguage = "auto",
+  screenshotShortcut = "",
+  voiceShortcut = DEFAULT_VOICE_SHORTCUT,
+  primaryShortcutTarget = false,
 }: ComposerProps) {
   const { t } = useTranslation();
+  const voiceShortcutLabel = voiceShortcut
+    ? formatShortcut(voiceShortcut, detectHostPlatform())
+    : "";
   const ref = useRef<HTMLTextAreaElement>(null);
   const voiceSttLanguageRef = useRef(voiceSttLanguage);
   voiceSttLanguageRef.current = voiceSttLanguage;
@@ -181,9 +202,15 @@ export function Composer({
   valueRef.current = value;
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
+  const screenshotShortcutRef = useRef(screenshotShortcut);
+  screenshotShortcutRef.current = screenshotShortcut;
+  const voiceShortcutRef = useRef(voiceShortcut);
+  voiceShortcutRef.current = voiceShortcut;
+  const captureScreenshotRef = useRef(onCaptureScreenshot);
+  captureScreenshotRef.current = onCaptureScreenshot;
   /** Composer text when dictation started (partials replace after this base). */
   const voiceBaseRef = useRef("");
-  /** PTT held: Left ⌥. */
+  /** Configured push-to-talk shortcut is currently held. */
   const pttHeldRef = useRef(false);
   const pttArmedRef = useRef(false);
   const pttTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -369,9 +396,29 @@ export function Composer({
     }
   }, [beginVoice, stopVoiceKeepText]);
 
+  const ownsShortcutEvent = useCallback(
+    (target: EventTarget | null) => {
+      const node = target instanceof Node ? target : null;
+      if (node && bodyRef.current?.contains(node)) return true;
+      if (node instanceof Element && node.closest(".settings-dialog")) return false;
+      if (node instanceof Element && node.closest(".composer")) return false;
+      if (
+        node instanceof HTMLElement &&
+        (node.tagName === "INPUT" ||
+          node.tagName === "TEXTAREA" ||
+          node.tagName === "SELECT" ||
+          node.isContentEditable)
+      ) {
+        return false;
+      }
+      return primaryShortcutTarget;
+    },
+    [primaryShortcutTarget],
+  );
+
   /**
    * Global voice keys:
-   * - Hold Left ⌥ → record; release → stop keep text
+   * - Hold the configured shortcut → record; release → stop keep text
    * - Esc while recording → cancel (discard live partial, restore base)
    * - Enter while recording → stop + send (works even if focus left the textarea)
    */
@@ -410,25 +457,45 @@ export function Composer({
     };
 
     const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.code === "AltLeft") {
-        if (e.repeat) return;
-        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-        const t = e.target as HTMLElement | null;
-        if (
-          t &&
-          !bodyRef.current?.contains(t) &&
-          (t.tagName === "INPUT" ||
-            t.tagName === "TEXTAREA" ||
-            t.isContentEditable)
-        ) {
+      const ownsEvent = ownsShortcutEvent(e.target);
+      if (
+        ownsEvent &&
+        screenshotShortcutRef.current &&
+        keyboardEventMatchesShortcut(e, screenshotShortcutRef.current)
+      ) {
+        if (e.repeat || disabledRef.current || voicePhaseRef.current !== "idle") {
           return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        // A screenshot combination may include the modifier-only voice key.
+        // Cancel that pending hold so one gesture cannot start both actions.
+        pttHeldRef.current = false;
+        pttArmedRef.current = false;
+        clearPttTimer();
+        setMenu(null);
+        captureScreenshotRef.current?.("region");
+        return;
+      }
+
+      if (
+        ownsEvent &&
+        voiceShortcutRef.current &&
+        keyboardEventMatchesShortcut(e, voiceShortcutRef.current)
+      ) {
+        if (e.repeat) return;
+        // A lone Option/Alt remains available for Option+letter diacritics;
+        // the next key cancels the short PTT arm before recording starts.
+        if (!isModifierOnlyShortcut(voiceShortcutRef.current)) {
+          e.preventDefault();
+          e.stopPropagation();
         }
         armPtt();
         return;
       }
 
-      // Option+key typing → abort PTT arm so we don't steal diacritic input.
-      if (pttHeldRef.current && e.code !== "AltLeft") {
+      // Another key before the hold delay means this was ordinary typing.
+      if (pttHeldRef.current && pttArmedRef.current) {
         pttArmedRef.current = false;
         clearPttTimer();
       }
@@ -469,7 +536,7 @@ export function Composer({
     };
 
     const onKeyUp = (e: globalThis.KeyboardEvent) => {
-      if (e.code !== "AltLeft") return;
+      if (!keyboardEventReleasesShortcut(e, voiceShortcutRef.current)) return;
       releasePtt();
     };
 
@@ -486,7 +553,13 @@ export function Composer({
       window.removeEventListener("keyup", onKeyUp, true);
       window.removeEventListener("blur", onBlur);
     };
-  }, [clearVoiceMode, startPttVoice, stopVoiceAndSend, stopVoiceKeepText]);
+  }, [
+    clearVoiceMode,
+    ownsShortcutEvent,
+    startPttVoice,
+    stopVoiceAndSend,
+    stopVoiceKeepText,
+  ]);
 
   function onCompositionStart() {
     imeLatch.current.onCompositionStart();
@@ -732,7 +805,12 @@ export function Composer({
           placeholder={
             voiceActive
               ? t("composer.listening")
-              : (placeholder ?? t("composer.messagePlaceholder"))
+              : (placeholder ??
+                (voiceShortcutLabel
+                  ? t("composer.messagePlaceholderShortcut", {
+                      shortcut: voiceShortcutLabel,
+                    })
+                  : t("composer.messagePlaceholder")))
           }
           rows={2}
           aria-autocomplete={slash.open ? "list" : undefined}
@@ -807,7 +885,9 @@ export function Composer({
                   onClick={() => void stopVoiceKeepText()}
                   title={
                     voiceMode === "ptt"
-                      ? t("composer.stopRelease")
+                      ? t("composer.stopReleaseShortcut", {
+                          shortcut: voiceShortcutLabel,
+                        })
                       : t("composer.stopKeepText")
                   }
                   aria-label={t("composer.stopRecording")}
@@ -832,7 +912,13 @@ export function Composer({
                   className="composer-mic"
                   disabled={disabled}
                   onClick={handleMicClick}
-                  title={t("composer.startVoice")}
+                  title={
+                    voiceShortcutLabel
+                      ? t("composer.startVoiceShortcut", {
+                          shortcut: voiceShortcutLabel,
+                        })
+                      : t("composer.startVoice")
+                  }
                   aria-label={t("composer.startVoiceAria")}
                 >
                   <MicIcon />

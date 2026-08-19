@@ -29,6 +29,7 @@ import { Sidebar } from "./components/sidebar";
 import type { ChatSearchHit } from "./lib/chatSearch";
 import { selectedModelNeedsGrokLogin } from "./lib/modelAuth";
 import { useAppUpdate } from "./hooks/useAppUpdate";
+import { usePanelSessionKey } from "./hooks/usePanelSessionKey";
 import { useGrokApp } from "./hooks/useGrokApp";
 import { useGrokAuth } from "./hooks/useGrokAuth";
 import {
@@ -188,8 +189,8 @@ function WorkspaceApp({
   const [rightFocus, setRightFocus] = useState<SplitFocusRequest | null>(null);
   /** Right panel has a tool tab (file / browser / …) — enable maximize. */
   const [rightHasContent, setRightHasContent] = useState(false);
-  /** Bumped on session switch — see `leaveSession`. */
-  const [closeFileViewsKey, setCloseFileViewsKey] = useState(0);
+  /** Right panel tabs follow the chat; this is the chat's panel identity. */
+  const { panelSessionKey, enterSession } = usePanelSessionKey(app.activeId);
   /** Codex: right panel fills upper row; chat column hidden. */
   const [rightMaximized, setRightMaximized] = useState(false);
 
@@ -202,27 +203,27 @@ function WorkspaceApp({
   }
 
   /**
-   * Leaving a session invalidates its open file views — they render a snapshot
-   * of that transcript's tool output. Bumped here rather than watched inside
-   * the panel so a provisional id turning real is not mistaken for a switch.
+   * Every chat owns its own right-panel tabs, so leaving one swaps the panel
+   * over to the target's. Told here rather than watched inside the panel, so a
+   * provisional id turning real is never mistaken for a switch.
    */
-  function leaveSession() {
+  function leaveSession(target: string | null) {
     goChat();
-    setCloseFileViewsKey((n) => n + 1);
+    enterSession(target);
   }
 
   function handleNew(cwd?: string | null) {
-    leaveSession();
+    leaveSession(null);
     void app.handleNew(cwd);
   }
 
   function handleSelect(id: string) {
-    leaveSession();
+    leaveSession(id);
     void app.handleSelect(id);
   }
 
   function handleSearchHit(hit: ChatSearchHit) {
-    leaveSession();
+    leaveSession(hit.sessionId);
     // Leave maximized-right so the chat column is visible for the jump.
     setRightMaximized(false);
     void app.handleSelect(hit.sessionId, { cwd: hit.cwd || undefined });
@@ -516,6 +517,9 @@ function WorkspaceApp({
                   slashCwd={app.workspaceCwd}
                   slashRefreshKey={slashRefreshKey}
                   voiceSttLanguage={guiSettings.voiceSttLanguage}
+                  screenshotShortcut={guiSettings.screenshotShortcut}
+                  voiceShortcut={guiSettings.voiceShortcut}
+                  primaryShortcutTarget
                   workspace={
                     !app.activeId
                       ? {
@@ -559,7 +563,11 @@ function WorkspaceApp({
                   }}
                   entry="home"
                   focusTool={rightFocus}
-                  closeFileViewsKey={closeFileViewsKey}
+                  sessionKey={panelSessionKey}
+                  onRestore={() => {
+                    setRightMounted(true);
+                    setRightOpen(true);
+                  }}
                   workspaceRoot={app.workspaceCwd}
                   maximized={rightMaximized && rightOpen && !chromeLocked}
                   onHasContentChange={(has) => {
@@ -599,6 +607,8 @@ function WorkspaceApp({
                   onConfigureModels={() => openSettings("providers")}
                   slashRefreshKey={slashRefreshKey}
                   voiceSttLanguage={guiSettings.voiceSttLanguage}
+                  screenshotShortcut={guiSettings.screenshotShortcut}
+                  voiceShortcut={guiSettings.voiceShortcut}
                   onOpenFile={handleOpenFile}
                 />
               ) : null}
@@ -610,7 +620,6 @@ function WorkspaceApp({
                 open={bottomOpen && !chromeLocked}
                 onCollapse={() => setBottomOpen(false)}
                 entry="terminal"
-                closeFileViewsKey={closeFileViewsKey}
                 workspaceRoot={app.workspaceCwd}
                 onCreateSideTask={() => app.createSideTaskSession()}
                 sideTaskEnabled={!!app.activeId}
@@ -645,6 +654,8 @@ function WorkspaceApp({
                 onConfigureModels={() => openSettings("providers")}
                 slashRefreshKey={slashRefreshKey}
                 voiceSttLanguage={guiSettings.voiceSttLanguage}
+                screenshotShortcut={guiSettings.screenshotShortcut}
+                voiceShortcut={guiSettings.voiceShortcut}
                 onOpenFile={handleOpenFile}
               />
             ) : null}

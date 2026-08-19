@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   GrokAccount,
   GrokAuthActionResult,
@@ -47,6 +47,7 @@ export function useGrokAuth() {
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skippedLogin, setSkippedLogin] = useState(loadSkippedLogin);
+  const loginPromiseRef = useRef<Promise<GrokAuthActionResult> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +89,18 @@ export function useGrokAuth() {
     };
   }, [t]);
 
-  async function login(): Promise<GrokAuthActionResult> {
+  function login(): Promise<GrokAuthActionResult> {
+    if (loginPromiseRef.current) return loginPromiseRef.current;
+
+    const request = performLogin();
+    loginPromiseRef.current = request;
+    void request.finally(() => {
+      if (loginPromiseRef.current === request) loginPromiseRef.current = null;
+    });
+    return request;
+  }
+
+  async function performLogin(): Promise<GrokAuthActionResult> {
     if (!window.grok?.loginGrok) {
       return unavailableResult(
         t("auth.bridgeUnavailable"),

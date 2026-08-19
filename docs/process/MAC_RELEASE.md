@@ -1,7 +1,7 @@
 # macOS release
 
 The public macOS artifact is a signed, notarized, and stapled Apple Silicon
-DMG. It contains `Grok Build GUI.app` and an `/Applications` shortcut for drag-and-drop
+DMG. It contains `Grok GUI.app` and an `/Applications` shortcut for drag-and-drop
 installation.
 
 ## Signing identity
@@ -57,7 +57,7 @@ The release command:
 5. runs code-signing, Gatekeeper, stapler, and disk-image verification.
 
 The final artifact is written to
-`out/release/Grok-Build-GUI-<version>-mac-arm64.dmg`.
+`out/release/Grok-GUI-<version>-mac-arm64.dmg`.
 
 Set `APPLE_KEYCHAIN` as well when the notarytool profile is stored in a
 non-default keychain.

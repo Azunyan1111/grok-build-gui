@@ -234,8 +234,7 @@ describe("BrowserAutomation", () => {
     expect(commandCalls(webContents, "Input.")).toEqual([]);
   });
 
-  it("treats a submit control as sensitive even when its label is neutral", async () => {
-    requestPermission.mockResolvedValueOnce(false);
+  it("does not prompt for a neutral submit such as search or navigation", async () => {
     webContents = fakeWebContents((method) => {
       if (method === "Accessibility.getFullAXTree") {
         return {
@@ -249,7 +248,41 @@ describe("BrowserAutomation", () => {
         };
       }
       if (method === "DOM.resolveNode") return { object: { objectId: "submit" } };
-      if (method === "Runtime.callFunctionOn") return { result: { value: true } };
+      if (method === "Runtime.callFunctionOn") {
+        return { result: { value: { isSubmit: true, sensitive: false } } };
+      }
+      if (method === "DOM.getBoxModel") {
+        return { model: { content: [0, 0, 10, 0, 10, 10, 0, 10] } };
+      }
+      return {};
+    });
+    registry.getWebContents.mockReturnValue(webContents);
+    const automation = new BrowserAutomation(requestPermission);
+    await automation.snapshot({ browserId: "right-1" });
+
+    await automation.click({ browserId: "right-1", ref: "e1" });
+    expect(requestPermission).not.toHaveBeenCalled();
+    expect(commandCalls(webContents, "Input.dispatchMouseEvent")).toHaveLength(3);
+  });
+
+  it("prompts for a neutral submit inside a sensitive form", async () => {
+    requestPermission.mockResolvedValueOnce(false);
+    webContents = fakeWebContents((method) => {
+      if (method === "Accessibility.getFullAXTree") {
+        return {
+          nodes: [
+            {
+              role: { value: "button" },
+              name: { value: "Continue" },
+              backendDOMNodeId: 10,
+            },
+          ],
+        };
+      }
+      if (method === "DOM.resolveNode") return { object: { objectId: "submit" } };
+      if (method === "Runtime.callFunctionOn") {
+        return { result: { value: { isSubmit: true, sensitive: true } } };
+      }
       return {};
     });
     registry.getWebContents.mockReturnValue(webContents);
@@ -350,7 +383,11 @@ describe("BrowserAutomation", () => {
     requestPermission.mockResolvedValueOnce(false);
     webContents = fakeWebContents((method) =>
       method === "Runtime.evaluate"
-        ? { result: { value: { inForm: true, name: "email" } } }
+        ? {
+            result: {
+              value: { inForm: true, sensitive: true, name: "email" },
+            },
+          }
         : {},
     );
     registry.getWebContents.mockReturnValue(webContents);
@@ -366,6 +403,25 @@ describe("BrowserAutomation", () => {
       rawInput: { browserId: "right-1", key: "Enter" },
     });
     expect(commandCalls(webContents, "Input.")).toEqual([]);
+  });
+
+  it("lets Enter submit a non-sensitive search form without prompting", async () => {
+    webContents = fakeWebContents((method) =>
+      method === "Runtime.evaluate"
+        ? {
+            result: {
+              value: { inForm: true, sensitive: false, name: "search" },
+            },
+          }
+        : {},
+    );
+    registry.getWebContents.mockReturnValue(webContents);
+    const automation = new BrowserAutomation(requestPermission);
+
+    await automation.pressKey({ browserId: "right-1", key: "Enter" });
+
+    expect(requestPermission).not.toHaveBeenCalled();
+    expect(commandCalls(webContents, "Input.dispatchKeyEvent")).toHaveLength(2);
   });
 
   it("maps keys, scrolls at the viewport center, and returns native screenshots", async () => {

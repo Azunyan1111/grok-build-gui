@@ -63,7 +63,7 @@ if (!publish) {
 module.exports = {
   appId: "ai.grok.build.gui",
   ...(publish ? { publish } : {}),
-  productName: "Grok Build GUI",
+  productName: "Grok GUI",
   directories: {
     buildResources: "resources",
     output: "out/release",
@@ -99,10 +99,10 @@ module.exports = {
     entitlementsInherit: "resources/entitlements.mac.plist",
     // Every mac artifact except the DMG, which overrides this below. Left to
     // the default the zip is named after productName, and productName has
-    // spaces: GitHub rewrites those to dots on upload ("Grok.Build.GUI-…"),
+    // spaces: GitHub rewrites those to dots on upload ("Grok.GUI-…"),
     // while latest-mac.yml records the dashed form, so electron-updater asks
     // for a URL that 404s. Naming the zip here keeps the two identical.
-    artifactName: "Grok-Build-GUI-${version}-${arch}-mac.${ext}",
+    artifactName: "Grok-GUI-${version}-${arch}-mac.${ext}",
     // Squirrel.Mac updates from a zip, not the DMG — the DMG stays the
     // human download, the zip is what electron-updater fetches.
     target: [
@@ -113,11 +113,11 @@ module.exports = {
   win: {
     icon: "resources/icon.png",
     target: [{ target: "nsis", arch: ["x64"] }],
-    artifactName: "Grok-Build-GUI-${version}-win-${arch}-setup.${ext}",
+    artifactName: "Grok-GUI-${version}-win-${arch}-setup.${ext}",
   },
   dmg: {
-    artifactName: "Grok-Build-GUI-${version}-mac-${arch}.${ext}",
-    title: "Grok Build GUI Installer",
+    artifactName: "Grok-GUI-${version}-mac-${arch}.${ext}",
+    title: "Grok GUI Installer",
     background: "dmg-background.png",
     icon: "resources/icon.icns",
     iconSize: 112,

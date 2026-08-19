@@ -156,3 +156,46 @@ export function extractRateLimitWindows(
 
   return windows;
 }
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function finiteNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/** Read the standalone Codex usage endpoint used by the official client. */
+export function extractUsagePayloadWindows(payload: unknown): UsageWindow[] {
+  const rateLimit = objectValue(objectValue(payload)?.rate_limit);
+  if (!rateLimit) return [];
+
+  const windows: UsageWindow[] = [];
+  for (const [id, fallbackLabel] of [
+    ["primary", "Current window"],
+    ["secondary", "Extended window"],
+  ] as const) {
+    const window = objectValue(rateLimit[`${id}_window`]);
+    if (!window) continue;
+
+    const usedPercent = finiteNumber(window.used_percent);
+    const windowSeconds = finiteNumber(window.limit_window_seconds);
+    const resetAtSeconds = finiteNumber(window.reset_at);
+    windows.push({
+      id,
+      label:
+        formatWindowLabel(
+          windowSeconds === null ? null : windowSeconds / 60,
+        ) ?? fallbackLabel,
+      usedPercent:
+        usedPercent === null ? null : Math.max(0, Math.min(100, usedPercent)),
+      resetsAt:
+        resetAtSeconds === null
+          ? null
+          : new Date(resetAtSeconds * 1000).toISOString(),
+    });
+  }
+  return windows;
+}

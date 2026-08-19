@@ -17,6 +17,7 @@ import { uid } from "../../lib/sessionUpdate";
 import type { ChatFile, ChatImage, LocalSession } from "../../types/chat";
 import type { QueuedPrompt } from "../../types/promptQueue";
 import { useTranslation } from "react-i18next";
+import type { KeyboardShortcut } from "../../lib/keyboardShortcut";
 
 export type SideTaskSubmit = (
   sessionId: string,
@@ -34,6 +35,8 @@ type Props = {
   permissionMode: PermissionMode;
   slashRefreshKey?: number;
   voiceSttLanguage?: string;
+  screenshotShortcut?: KeyboardShortcut;
+  voiceShortcut?: KeyboardShortcut;
   onSubmit: SideTaskSubmit;
   onCancel: (sessionId: string) => void;
   onSendNowQueued?: (id: string) => void;
@@ -53,6 +56,8 @@ export function SideTaskPane({
   permissionMode,
   slashRefreshKey,
   voiceSttLanguage,
+  screenshotShortcut,
+  voiceShortcut,
   onSubmit,
   onCancel,
   onSendNowQueued,
@@ -185,6 +190,8 @@ export function SideTaskPane({
         slashCwd={workspaceRoot}
         slashRefreshKey={slashRefreshKey}
         voiceSttLanguage={voiceSttLanguage}
+        screenshotShortcut={screenshotShortcut}
+        voiceShortcut={voiceShortcut}
         placeholder={t("tools.askSideTask")}
       />
     </div>

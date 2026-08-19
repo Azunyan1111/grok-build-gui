@@ -103,6 +103,61 @@ describe("SettingsDialog", () => {
     expect(DEFAULT_GUI_SETTINGS.uiLanguage).toBe("system");
   });
 
+  it("records shortcuts and clears with Backspace", () => {
+    const { onChange } = renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "Shortcuts" }));
+
+    const screenshot = screen.getByRole("button", {
+      name: "Capture screenshot",
+    });
+    fireEvent.click(screenshot);
+    fireEvent.keyDown(screenshot, {
+      key: "4",
+      code: "Digit4",
+      metaKey: true,
+      shiftKey: true,
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_GUI_SETTINGS,
+      screenshotShortcut: "Shift+Meta+Digit4",
+    });
+
+    const voice = screen.getByRole("button", { name: "Voice input" });
+    fireEvent.click(voice);
+    fireEvent.keyDown(voice, { key: "Backspace", code: "Backspace" });
+    expect(onChange).toHaveBeenCalledWith({
+      ...DEFAULT_GUI_SETTINGS,
+      voiceShortcut: "",
+    });
+  });
+
+  it("rejects a shortcut already assigned to the other action", () => {
+    const onChange = vi.fn();
+    render(
+      <SettingsDialog
+        open
+        initialSection="shortcuts"
+        settings={{
+          ...DEFAULT_GUI_SETTINGS,
+          screenshotShortcut: "Shift+Meta+Digit4",
+        }}
+        onChange={onChange}
+        onClose={vi.fn()}
+        update={NO_UPDATE}
+      />,
+    );
+    const voice = screen.getByRole("button", { name: "Voice input" });
+    fireEvent.click(voice);
+    fireEvent.keyDown(voice, {
+      key: "4",
+      code: "Digit4",
+      metaKey: true,
+      shiftKey: true,
+    });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText("This shortcut is already in use.")).toBeTruthy();
+  });
+
   it("closes on Escape and on a backdrop click, but not from inside", () => {
     const onClose = vi.fn();
     renderDialog({ onClose });

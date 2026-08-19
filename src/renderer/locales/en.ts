@@ -43,6 +43,9 @@ export const en = {
   "auth.privacy":
     "Your password is never shared with this app. Grok stores the authorization securely in your local user profile.",
 
+  "errors.internalError":
+    "Internal error. Try again, or start a new chat if this one has run out of context window space.",
+
   "settings.title": "Settings",
   "settings.subtitle": "Changes save automatically.",
   "settings.close": "Close settings",
@@ -60,8 +63,19 @@ export const en = {
   "settings.terminalShellHint": "Applies to new terminal sessions.",
   "settings.terminalShellSystem": "System default",
   "settings.voice": "Voice",
+  "settings.shortcuts": "Shortcuts",
   "settings.speechLanguage": "Dictation language",
   "settings.speechLanguageHint": "Follow system uses your device language.",
+  "settings.shortcutsHint":
+    "These shortcuts work while the app is focused. Click a field, then press a shortcut. Backspace clears it; Escape cancels recording.",
+  "settings.screenshotShortcut": "Capture screenshot",
+  "settings.screenshotShortcutHint": "Press once to start a region screenshot.",
+  "settings.voiceShortcut": "Voice input",
+  "settings.voiceShortcutHint": "Hold to speak; release to stop.",
+  "settings.shortcutRecording": "Press shortcut…",
+  "settings.shortcutNotSet": "Not set",
+  "settings.shortcutConflict": "This shortcut is already in use.",
+  "settings.shortcutRestoreDefaults": "Restore defaults",
 
   "chrome.titleBar": "Window title bar",
   "chrome.appMenu": "Application menu",
@@ -152,7 +166,7 @@ export const en = {
   "main.emptyHistory":
     "Session loaded, but no supported chat history was found.",
   "main.preloadMissing":
-    "The app bridge is unavailable. Restart Grok Build GUI.",
+    "The app bridge is unavailable. Restart Grok GUI.",
   "chat.turnNavigation": "Conversation turns",
   "chat.turnLabel": "Turn {{number}}",
   "chat.imageTurn": "Image attachment · Turn {{number}}",
@@ -283,7 +297,9 @@ export const en = {
   "composer.stopRecording": "Stop recording",
   "composer.stopAndSend": "Stop and send",
   "composer.startVoice":
-    "Click to record — words appear as you speak. Hold ⌥ for push-to-talk.",
+    "Click to record — words appear as you speak.",
+  "composer.startVoiceShortcut":
+    "Click to record — words appear as you speak. Hold {{shortcut}} for push-to-talk.",
   "composer.startVoiceAria": "Start voice recording",
   "composer.voiceUnavailable":
     "Live voice is unavailable. Restart the app after updating.",
@@ -309,8 +325,11 @@ export const en = {
   "composer.attachment": "Attachment",
   "composer.removeNamed": "Remove {{name}}",
   "composer.listening": "Listening… speak now  (Enter to send)",
-  "composer.messagePlaceholder": "Message Grok…  Hold ⌥ to speak",
-  "composer.stopRelease": "Stop recording (or release ⌥)",
+  "composer.messagePlaceholder": "Message Grok…",
+  "composer.messagePlaceholderShortcut":
+    "Message Grok…  Hold {{shortcut}} to speak",
+  "composer.stopRelease": "Stop recording",
+  "composer.stopReleaseShortcut": "Stop recording (or release {{shortcut}})",
   "composer.stopKeepText": "Stop recording (keep text in the box)",
   "composer.queueFollowUp": "Queue follow-up",
   "composer.sendTopQueue": "Send now (top of queue)",

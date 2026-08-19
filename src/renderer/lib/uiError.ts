@@ -64,5 +64,12 @@ export function localizeUiError(
     return t("auth.sessionExpired");
   }
 
+  // The agent reports context-window overflows (and other fatal backend
+  // failures) as a generic "Internal error" without a structured code. Match
+  // case-insensitively so the raw English string never leaks into the chat.
+  if (raw.toLowerCase().includes("internal error")) {
+    return t("errors.internalError");
+  }
+
   return raw;
 }

@@ -7,6 +7,7 @@ import type { OpenFileViewRequest } from "../chat/FileChangeBar";
 import type { ModelState, PermissionMode } from "../../../electron/preload";
 import type { LocalSession } from "../../types/chat";
 import type { QueuedPrompt } from "../../types/promptQueue";
+import type { KeyboardShortcut } from "../../lib/keyboardShortcut";
 import type { SideTaskSubmit } from "./SideTaskPane";
 import type {
   SplitEntry,
@@ -30,10 +31,14 @@ type Props = {
   /** Topbar / slash / chat: open or focus a tool. */
   focusTool?: SplitFocusRequest | null;
   /**
-   * Bump on session switch to close file views, which show a snapshot of the
-   * session being left. Terminals and browsers own live processes and stay.
+   * Identity of the chat that owns this panel's tabs. When set, each chat keeps
+   * its own tab set — switching parks the outgoing tabs (webviews and PTYs stay
+   * alive) and restores the incoming chat's. Omit for a dock whose tabs are
+   * global, like the bottom terminal.
    */
-  closeFileViewsKey?: number;
+  sessionKey?: string;
+  /** Re-open the panel for a chat that was left with tabs showing. */
+  onRestore?: () => void;
   /** Workspace root for fileview disk reads. */
   workspaceRoot?: string;
   /**
@@ -56,6 +61,8 @@ type Props = {
   permissionMode: PermissionMode;
   slashRefreshKey?: number;
   voiceSttLanguage?: string;
+  screenshotShortcut?: KeyboardShortcut;
+  voiceShortcut?: KeyboardShortcut;
   onSubmitSideTask?: SideTaskSubmit;
   onCancelSideTask?: (sessionId: string) => void;
   onSendNowSideTask?: (id: string) => void;
@@ -76,7 +83,8 @@ export function SplitPanel({
   onCollapse,
   entry,
   focusTool = null,
-  closeFileViewsKey,
+  sessionKey,
+  onRestore,
   workspaceRoot,
   maximized = false,
   onHasContentChange,
@@ -90,6 +98,8 @@ export function SplitPanel({
   permissionMode,
   slashRefreshKey,
   voiceSttLanguage,
+  screenshotShortcut,
+  voiceShortcut,
   onSubmitSideTask,
   onCancelSideTask,
   onSendNowSideTask,
@@ -120,8 +130,9 @@ export function SplitPanel({
     open,
     size,
     focusTool,
-    closeFileViewsKey,
+    sessionKey,
     onCollapse,
+    onRestore,
     onCreateSideTask,
     onCloseSideTask,
   });
@@ -202,6 +213,8 @@ export function SplitPanel({
           permissionMode={permissionMode}
           slashRefreshKey={slashRefreshKey}
           voiceSttLanguage={voiceSttLanguage}
+          screenshotShortcut={screenshotShortcut}
+          voiceShortcut={voiceShortcut}
           onSubmitSideTask={onSubmitSideTask}
           onCancelSideTask={onCancelSideTask}
           onSendNowSideTask={onSendNowSideTask}

@@ -1,12 +1,10 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
-import { shell } from "electron";
 import { findGrok } from "./findGrok.js";
 import {
   clearGrokAuthFile,
   getGrokAccount,
   type GrokAccount,
 } from "./grokAccount.js";
-import { extractGrokLoginUrl } from "./grokAuthUrl.js";
 import { buildSystemProxyEnvironment } from "./systemProxy.js";
 
 export type GrokAuthActionResult = {
@@ -64,31 +62,12 @@ export async function loginToGrok(): Promise<GrokAuthActionResult> {
     activeLogin = login;
     let stdout = "";
     let stderr = "";
-    let openedLoginUrl: string | null = null;
-    let browserOpenError: string | null = null;
-
-    function openPrintedLoginUrl(): void {
-      if (openedLoginUrl) return;
-      const url = extractGrokLoginUrl(`${stdout}\n${stderr}`);
-      if (!url) return;
-
-      openedLoginUrl = url;
-      void shell.openExternal(url).catch((error: unknown) => {
-        browserOpenError =
-          error instanceof Error
-            ? `Could not open the sign-in page: ${error.message}`
-            : "Could not open the sign-in page in your browser.";
-        child.kill("SIGTERM");
-      });
-    }
 
     child.stdout.on("data", (chunk: Buffer) => {
       stdout = (stdout + chunk.toString()).slice(-16_000);
-      openPrintedLoginUrl();
     });
     child.stderr.on("data", (chunk: Buffer) => {
       stderr = (stderr + chunk.toString()).slice(-16_000);
-      openPrintedLoginUrl();
     });
     child.on("error", (error) => {
       if (activeLogin === login) activeLogin = null;
@@ -108,8 +87,7 @@ export async function loginToGrok(): Promise<GrokAuthActionResult> {
       const detail = cleanCliMessage(stderr) || cleanCliMessage(stdout);
       resolve(
         failure(
-          browserOpenError ||
-            detail ||
+          detail ||
             (code === 0
               ? "Grok did not save a valid sign-in. Please try again."
               : `Grok sign-in exited with code ${code ?? "unknown"}.`),

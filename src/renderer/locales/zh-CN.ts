@@ -42,6 +42,9 @@ export const zhCN: Record<TranslationKey, string> = {
   "auth.privacy":
     "你的密码不会提供给本应用。Grok 会将授权信息安全地存储在本地用户配置中。",
 
+  "errors.internalError":
+    "内部错误。请重试；如果当前会话已超出上下文窗口，请新建会话继续。",
+
   "settings.title": "设置",
   "settings.subtitle": "更改会自动保存。",
   "settings.close": "关闭",
@@ -58,8 +61,19 @@ export const zhCN: Record<TranslationKey, string> = {
   "settings.terminalShellHint": "仅对新建的终端会话生效。",
   "settings.terminalShellSystem": "系统默认",
   "settings.voice": "语音",
+  "settings.shortcuts": "快捷键",
   "settings.speechLanguage": "听写语言",
   "settings.speechLanguageHint": "“跟随系统”会使用设备语言。",
+  "settings.shortcutsHint":
+    "快捷键仅在应用聚焦时生效。点击输入框后按下组合键；Backspace 清除，Esc 取消录入。",
+  "settings.screenshotShortcut": "截取屏幕",
+  "settings.screenshotShortcutHint": "按一次开始区域截图。",
+  "settings.voiceShortcut": "语音输入",
+  "settings.voiceShortcutHint": "按住说话，松开停止。",
+  "settings.shortcutRecording": "请按快捷键…",
+  "settings.shortcutNotSet": "未设置",
+  "settings.shortcutConflict": "此快捷键已被占用。",
+  "settings.shortcutRestoreDefaults": "恢复默认值",
 
   "chrome.titleBar": "窗口标题栏",
   "chrome.appMenu": "应用菜单",
@@ -142,7 +156,7 @@ export const zhCN: Record<TranslationKey, string> = {
   "main.scrollBottomAria": "滚动到底部并恢复自动滚动",
   "main.connectionIssue": "连接异常",
   "main.emptyHistory": "会话已加载，但没有找到受支持的聊天记录。",
-  "main.preloadMissing": "应用桥接不可用，请重启 Grok Build GUI。",
+  "main.preloadMissing": "应用桥接不可用，请重启 Grok GUI。",
   "chat.turnNavigation": "对话轮次",
   "chat.turnLabel": "第 {{number}} 轮",
   "chat.imageTurn": "图片附件 · 第 {{number}} 轮",
@@ -267,7 +281,9 @@ export const zhCN: Record<TranslationKey, string> = {
   "composer.stopRecording": "停止录音",
   "composer.stopAndSend": "停止并发送",
   "composer.startVoice":
-    "点击开始录音，文字会随语音显示；按住 ⌥ 可使用按键说话。",
+    "点击开始录音，文字会随语音显示。",
+  "composer.startVoiceShortcut":
+    "点击开始录音，文字会随语音显示；按住 {{shortcut}} 可使用按键说话。",
   "composer.startVoiceAria": "开始语音录制",
   "composer.voiceUnavailable": "实时语音不可用，请在更新后重启应用。",
   "composer.microphoneDenied": "麦克风权限已被拒绝。",
@@ -287,8 +303,10 @@ export const zhCN: Record<TranslationKey, string> = {
   "composer.attachment": "附件",
   "composer.removeNamed": "移除 {{name}}",
   "composer.listening": "正在听取…请开始说话（按 Enter 发送）",
-  "composer.messagePlaceholder": "给 Grok 发消息…按住 ⌥ 说话",
-  "composer.stopRelease": "停止录音（或松开 ⌥）",
+  "composer.messagePlaceholder": "给 Grok 发消息…",
+  "composer.messagePlaceholderShortcut": "给 Grok 发消息…按住 {{shortcut}} 说话",
+  "composer.stopRelease": "停止录音",
+  "composer.stopReleaseShortcut": "停止录音（或松开 {{shortcut}}）",
   "composer.stopKeepText": "停止录音（文字保留在输入框中）",
   "composer.queueFollowUp": "加入后续消息队列",
   "composer.sendTopQueue": "立即发送（队列首项）",

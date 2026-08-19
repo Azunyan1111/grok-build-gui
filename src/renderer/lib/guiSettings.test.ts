@@ -34,4 +34,33 @@ describe("terminalTheme preference", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ terminalTheme: "light" }));
     expect(loadGuiSettings().terminalTheme).toBe("light");
   });
+
+  it("loads shortcut defaults and keeps explicit custom shortcuts", () => {
+    expect(loadGuiSettings().screenshotShortcut).toBe("");
+    expect(loadGuiSettings().voiceShortcut).toBe("AltLeft");
+
+    saveGuiSettings({
+      ...loadGuiSettings(),
+      screenshotShortcut: "Shift+Meta+Digit4",
+      voiceShortcut: "F8",
+    });
+    expect(loadGuiSettings().screenshotShortcut).toBe("Shift+Meta+Digit4");
+    expect(loadGuiSettings().voiceShortcut).toBe("F8");
+  });
+
+  it("repairs invalid stored shortcuts without disturbing other settings", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        uiLanguage: "zh-CN",
+        screenshotShortcut: "KeyS",
+        voiceShortcut: "not a shortcut",
+      }),
+    );
+    const loaded = loadGuiSettings();
+    expect(loaded.uiLanguage).toBe("zh-CN");
+    expect(loaded.screenshotShortcut).toBe("");
+    expect(loaded.voiceShortcut).toBe("AltLeft");
+  });
 });

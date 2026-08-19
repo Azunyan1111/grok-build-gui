@@ -61,16 +61,6 @@ export async function listScreenSourcesMeta(): Promise<DesktopCapturerSource[]> 
   });
 }
 
-/** First getSources call is cold; warm the pipeline after app ready. */
-export function prewarmScreenCapture(): void {
-  void desktopCapturer
-    .getSources({
-      types: ["screen"],
-      thumbnailSize: { width: 16, height: 16 },
-    })
-    .catch(() => undefined);
-}
-
 export async function captureMacRegion(): Promise<NativeImage> {
   const output = path.join(
     os.tmpdir(),

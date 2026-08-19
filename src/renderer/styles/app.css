@@ -451,7 +451,7 @@ html[data-platform="win32"] .sidebar-resizer {
 /*
  * Sidebar top chrome + product title:
  * 1) Collapse toggle sits on the traffic-light band (Codex-style align).
- * 2) "Grok Build GUI" sits below, above New chat / session list.
+ * 2) "Grok GUI" sits below, above New chat / session list.
  */
 .sidebar-brand {
   display: flex;
@@ -5740,6 +5740,46 @@ mark.search-hit {
   outline: none;
   border-color: var(--accent, #6b8afd);
   box-shadow: 0 0 0 2px rgba(107, 138, 253, 0.25);
+}
+
+.shortcut-recorder {
+  flex-shrink: 0;
+  min-width: 128px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
+}
+
+.shortcut-recorder:hover {
+  border-color: var(--text-muted);
+}
+
+.shortcut-recorder:focus,
+.shortcut-recorder.is-recording {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.18);
+}
+
+.shortcut-reset {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.shortcut-reset:hover {
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 /* ── Plugins main view (replaces chat, not a modal) ─── */

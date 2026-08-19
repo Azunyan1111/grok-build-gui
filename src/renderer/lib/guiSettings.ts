@@ -10,6 +10,12 @@ import {
 } from "./sttLanguage";
 import type { UiLanguagePreference } from "./uiLanguage";
 import type { TerminalShellPreference } from "../../electron/terminalShell";
+import {
+  DEFAULT_SCREENSHOT_SHORTCUT,
+  DEFAULT_VOICE_SHORTCUT,
+  normalizeShortcut,
+  type KeyboardShortcut,
+} from "./keyboardShortcut";
 
 /** Built-in terminal window color scheme. */
 export type TerminalThemePreference = "dark" | "light";
@@ -37,6 +43,10 @@ export type GuiSettings = {
   terminalShell: TerminalShellPreference;
   /** Assistant message body: formatted markdown vs raw source. */
   messageDisplayMode: MessageDisplayMode;
+  /** App-focused shortcut that starts a region screenshot. Empty disables it. */
+  screenshotShortcut: KeyboardShortcut;
+  /** App-focused push-to-talk shortcut. Empty disables it. */
+  voiceShortcut: KeyboardShortcut;
 };
 
 export const DEFAULT_GUI_SETTINGS: GuiSettings = {
@@ -48,6 +58,8 @@ export const DEFAULT_GUI_SETTINGS: GuiSettings = {
   terminalTheme: "light",
   terminalShell: "system",
   messageDisplayMode: "rendered",
+  screenshotShortcut: DEFAULT_SCREENSHOT_SHORTCUT,
+  voiceShortcut: DEFAULT_VOICE_SHORTCUT,
 };
 
 const STORAGE_KEY = "grok-gui.settings";
@@ -139,6 +151,15 @@ export function loadGuiSettings(): GuiSettings {
           ? (parsed.terminalShell as TerminalShellPreference)
           : DEFAULT_GUI_SETTINGS.terminalShell,
       messageDisplayMode: parseMessageDisplayMode(parsed.messageDisplayMode),
+      screenshotShortcut: normalizeShortcut(
+        parsed.screenshotShortcut,
+        DEFAULT_GUI_SETTINGS.screenshotShortcut,
+      ),
+      voiceShortcut: normalizeShortcut(
+        parsed.voiceShortcut,
+        DEFAULT_GUI_SETTINGS.voiceShortcut,
+        { allowModifierOnly: true },
+      ),
     };
   } catch {
     return { ...DEFAULT_GUI_SETTINGS };

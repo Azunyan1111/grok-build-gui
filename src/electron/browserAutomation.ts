@@ -46,7 +46,7 @@ const ACTIONABLE_ROLES = new Set([
 ]);
 
 const SENSITIVE_ACTION_RE =
-  /\b(submit|purchase|buy|pay|send|delete|remove|confirm|place order|checkout|log in|login|sign in|publish|post)\b|提交|购买|付款|支付|发送|删除|移除|确认|登录|发布|下单/i;
+  /\b(purchase|buy|pay|send|delete|remove|place order|checkout|log in|login|sign in|publish|post|subscribe|authorize|approve)\b|购买|付款|支付|发送|删除|移除|登录|发布|下单|订阅|授权|批准/i;
 
 function asText(value: unknown): string {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
@@ -197,12 +197,12 @@ export class BrowserAutomation {
     if (!ref) throw new Error("ref is required.");
     const { id, webContents } = await this.target(asText(args.browserId) || null);
     const element = this.element(id, ref);
-    const submitLike = await this.isSubmitControl(webContents, element);
+    const submit = await this.inspectSubmitControl(webContents, element);
     await this.allowSensitive(
       element,
       "Click",
       { browserId: id, ref, ...args },
-      submitLike,
+      submit.sensitive,
     );
     await this.command(webContents, "DOM.scrollIntoViewIfNeeded", {
       backendNodeId: element.backendNodeId,
@@ -254,25 +254,33 @@ export class BrowserAutomation {
     return false;
   }
 
-  private async isSubmitControl(
+  private async inspectSubmitControl(
     webContents: WebContents,
     element: ElementRef,
-  ): Promise<boolean> {
+  ): Promise<{ isSubmit: boolean; sensitive: boolean }> {
     const resolved = await this.command(webContents, "DOM.resolveNode", {
       backendNodeId: element.backendNodeId,
     });
     const objectId = (resolved.object as { objectId?: unknown } | undefined)
       ?.objectId;
-    if (typeof objectId !== "string") return false;
+    if (typeof objectId !== "string") {
+      return { isSubmit: false, sensitive: false };
+    }
     const checked = await this.command(webContents, "Runtime.callFunctionOn", {
       objectId,
       functionDeclaration:
-        "function(){return !!(this.matches?.('input[type=submit],input[type=image],button[type=submit]')||(this.tagName==='BUTTON'&&this.form&&!this.hasAttribute('type')))}",
+        "function(){const isSubmit=!!(this.matches?.('input[type=submit],input[type=image],button[type=submit]')||(this.tagName==='BUTTON'&&this.form&&!this.hasAttribute('type')));if(!isSubmit)return {isSubmit:false,sensitive:false};const f=this.form||this.closest?.('form');const context=[this.innerText,this.value,this.getAttribute?.('aria-label'),f?.action,f?.getAttribute?.('aria-label'),f?.innerText].filter(Boolean).join(' ');const hasPassword=!!f?.querySelector?.('input[type=password]');const sensitive=hasPassword||/purchase|buy|pay|send|delete|remove|place order|checkout|log in|login|sign in|publish|post|subscribe|authorize|approve|购买|付款|支付|发送|删除|移除|登录|发布|下单|订阅|授权|批准/i.test(context);return {isSubmit,sensitive}}",
       returnByValue: true,
     });
-    return Boolean(
-      (checked.result as { value?: unknown } | undefined)?.value,
-    );
+    const value = (checked.result as { value?: unknown } | undefined)?.value;
+    if (!value || typeof value !== "object") {
+      return { isSubmit: Boolean(value), sensitive: false };
+    }
+    const result = value as { isSubmit?: unknown; sensitive?: unknown };
+    return {
+      isSubmit: result.isSubmit === true,
+      sensitive: result.sensitive === true,
+    };
   }
 
   async fill(args: Record<string, unknown>): Promise<BrowserToolResult> {
@@ -341,13 +349,13 @@ export class BrowserAutomation {
     if (mapped.key === "Enter") {
       const focused = await this.command(webContents, "Runtime.evaluate", {
         expression:
-          "(()=>{const e=document.activeElement;return {inForm:!!e?.closest?.('form'),name:e?.getAttribute?.('aria-label')||e?.getAttribute?.('name')||e?.tagName||''}})()",
+          "(()=>{const e=document.activeElement;const f=e?.closest?.('form');if(!f)return {inForm:false,sensitive:false,name:''};const context=[e?.getAttribute?.('aria-label'),e?.getAttribute?.('name'),f.action,f.getAttribute?.('aria-label'),f.innerText].filter(Boolean).join(' ');return {inForm:true,sensitive:!!f.querySelector?.('input[type=password]')||/purchase|buy|pay|send|delete|remove|place order|checkout|log in|login|sign in|publish|post|subscribe|authorize|approve|购买|付款|支付|发送|删除|移除|登录|发布|下单|订阅|授权|批准/i.test(context),name:e?.getAttribute?.('aria-label')||e?.getAttribute?.('name')||e?.tagName||''}})()",
         returnByValue: true,
       });
       const value = (focused.result as { value?: unknown } | undefined)?.value as
-        | { inForm?: unknown; name?: unknown }
+        | { inForm?: unknown; sensitive?: unknown; name?: unknown }
         | undefined;
-      if (value?.inForm) {
+      if (value?.inForm && value.sensitive) {
         const allowed = await this.requestPermission({
           title: `Submit browser form from ${asText(value.name) || "focused field"}`,
           kind: "browser",

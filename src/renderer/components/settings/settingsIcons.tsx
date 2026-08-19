@@ -51,6 +51,15 @@ export function VoiceIcon() {
   );
 }
 
+export function ShortcutIcon() {
+  return (
+    <Svg>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h7" />
+    </Svg>
+  );
+}
+
 export function ComputerIcon() {
   return (
     <Svg>

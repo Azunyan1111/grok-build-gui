@@ -15,9 +15,16 @@ import {
   ComputerIcon,
   InterfaceIcon,
   ProviderIcon,
+  ShortcutIcon,
   UpdateIcon,
   VoiceIcon,
 } from "./settingsIcons";
+import { ShortcutRecorder } from "./ShortcutRecorder";
+import {
+  DEFAULT_SCREENSHOT_SHORTCUT,
+  DEFAULT_VOICE_SHORTCUT,
+  shortcutsConflict,
+} from "../../lib/keyboardShortcut";
 
 export type SettingsDialogProps = {
   open: boolean;
@@ -35,6 +42,7 @@ const SECTIONS = [
   { id: "interface", labelKey: "settings.interface", Icon: InterfaceIcon },
   { id: "appearance", labelKey: "settings.appearance", Icon: AppearanceIcon },
   { id: "voice", labelKey: "settings.voice", Icon: VoiceIcon },
+  { id: "shortcuts", labelKey: "settings.shortcuts", Icon: ShortcutIcon },
   { id: "providers", labelKey: "provider.title", Icon: ProviderIcon },
   { id: "computer", labelKey: "computer.title", Icon: ComputerIcon },
   { id: "update", labelKey: "update.title", Icon: UpdateIcon },
@@ -80,6 +88,9 @@ export function SettingsDialog({
   const [terminalShells, setTerminalShells] = useState<TerminalShellOption[]>([
     { value: "system", label: t("settings.terminalShellSystem") },
   ]);
+  const [shortcutConflict, setShortcutConflict] = useState<
+    "screenshot" | "voice" | null
+  >(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const language = i18n.resolvedLanguage ?? i18n.language;
 
@@ -125,6 +136,25 @@ export function SettingsDialog({
 
   function patch(partial: Partial<GuiSettings>) {
     onChange({ ...settings, ...partial });
+  }
+
+  function changeShortcut(
+    field: "screenshotShortcut" | "voiceShortcut",
+    value: string,
+  ): boolean {
+    const other =
+      field === "screenshotShortcut"
+        ? settings.voiceShortcut
+        : settings.screenshotShortcut;
+    if (shortcutsConflict(value, other)) {
+      setShortcutConflict(
+        field === "screenshotShortcut" ? "screenshot" : "voice",
+      );
+      return false;
+    }
+    setShortcutConflict(null);
+    patch({ [field]: value });
+    return true;
   }
 
   const interfaceLanguageOptions = [
@@ -320,6 +350,79 @@ export function SettingsDialog({
                     </select>
                   </div>
                 </div>
+              </section>
+            ) : null}
+
+            {section === "shortcuts" ? (
+              <section className="settings-section">
+                <p className="settings-section-desc">
+                  {t("settings.shortcutsHint")}
+                </p>
+                <div className="settings-card">
+                  <div className="settings-row">
+                    <div className="settings-row-text">
+                      <div className="settings-row-label">
+                        {t("settings.screenshotShortcut")}
+                      </div>
+                      <div
+                        className={`settings-row-hint${
+                          shortcutConflict === "screenshot"
+                            ? " settings-row-hint-error"
+                            : ""
+                        }`}
+                      >
+                        {shortcutConflict === "screenshot"
+                          ? t("settings.shortcutConflict")
+                          : t("settings.screenshotShortcutHint")}
+                      </div>
+                    </div>
+                    <ShortcutRecorder
+                      ariaLabel={t("settings.screenshotShortcut")}
+                      value={settings.screenshotShortcut}
+                      onChange={(value) =>
+                        changeShortcut("screenshotShortcut", value)
+                      }
+                    />
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="settings-row-text">
+                      <div className="settings-row-label">
+                        {t("settings.voiceShortcut")}
+                      </div>
+                      <div
+                        className={`settings-row-hint${
+                          shortcutConflict === "voice"
+                            ? " settings-row-hint-error"
+                            : ""
+                        }`}
+                      >
+                        {shortcutConflict === "voice"
+                          ? t("settings.shortcutConflict")
+                          : t("settings.voiceShortcutHint")}
+                      </div>
+                    </div>
+                    <ShortcutRecorder
+                      ariaLabel={t("settings.voiceShortcut")}
+                      value={settings.voiceShortcut}
+                      allowModifierOnly
+                      onChange={(value) => changeShortcut("voiceShortcut", value)}
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="shortcut-reset"
+                  onClick={() => {
+                    setShortcutConflict(null);
+                    patch({
+                      screenshotShortcut: DEFAULT_SCREENSHOT_SHORTCUT,
+                      voiceShortcut: DEFAULT_VOICE_SHORTCUT,
+                    });
+                  }}
+                >
+                  {t("settings.shortcutRestoreDefaults")}
+                </button>
               </section>
             ) : null}
 

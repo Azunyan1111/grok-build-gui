@@ -307,7 +307,7 @@ export function Sidebar({
           )}
         </div>
         <div className="brand-title-row">
-          <div className="brand-title">Grok Build GUI</div>
+          <div className="brand-title">Grok GUI</div>
           <button
             type="button"
             className={

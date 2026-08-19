@@ -18,14 +18,14 @@ const keychainProfile = process.env.APPLE_KEYCHAIN_PROFILE;
 const keychainPath = process.env.APPLE_KEYCHAIN;
 const releaseDir = path.join(projectRoot, "out", "release");
 const appDir = path.join(releaseDir, "mac-arm64");
-const appPath = path.join(appDir, "Grok Build GUI.app");
+const appPath = path.join(appDir, "Grok GUI.app");
 const uploadZip = path.join(
   releaseDir,
-  `Grok-Build-GUI-${packageJson.version}-mac-arm64-notary-upload.zip`,
+  `Grok-GUI-${packageJson.version}-mac-arm64-notary-upload.zip`,
 );
 const dmgPath = path.join(
   releaseDir,
-  `Grok-Build-GUI-${packageJson.version}-mac-arm64.dmg`,
+  `Grok-GUI-${packageJson.version}-mac-arm64.dmg`,
 );
 const electronBuilder = path.join(
   projectRoot,
@@ -178,7 +178,7 @@ if (process.env.UPDATE_GITHUB_OWNER && process.env.UPDATE_GITHUB_REPO) {
   const feed = path.join(releaseDir, "latest-mac.yml");
   const updateZip = path.join(
     releaseDir,
-    `Grok-Build-GUI-${packageJson.version}-mac-arm64.zip`,
+    `Grok-GUI-${packageJson.version}-mac-arm64.zip`,
   );
   for (const required of [feed, updateZip]) {
     if (!existsSync(required)) {

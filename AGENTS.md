@@ -42,6 +42,23 @@ task needs them:
 - Treat ACP and the documented Grok CLI as the integration boundary. Do not link
   application code to reference-only Grok Build internals under `tmp/`.
 
+## Product naming
+
+- The application is named **Grok GUI**. That exact string is the only correct
+  user-visible name: window title, sidebar brand, menu label, `productName` in
+  `config/electron-builder.cjs`, and the DMG title. Never ship "Grok Build GUI"
+  or any other variant.
+- Release artifacts are named `Grok-GUI-<version>-…` (dashes, no spaces). The
+  hardcoded expected filenames in `scripts/release-mac.mjs`,
+  `scripts/release-win.mjs`, and `scripts/dev-update-feed.mjs` must stay in sync
+  with the `artifactName` patterns, or the release scripts fail their existence
+  checks.
+- **Grok Build** without "GUI" means the upstream xAI CLI agent this app drives.
+  Leave those references alone when renaming; only the app is "Grok GUI".
+- `appId` stays `ai.grok.build.gui`. It is an identity, not a display name, and
+  changing it breaks update continuity and the Windows upgrade path for already
+  installed copies.
+
 ## Runtime and repository hygiene
 
 - `./bootstrap` is the supported clean-clone setup path.

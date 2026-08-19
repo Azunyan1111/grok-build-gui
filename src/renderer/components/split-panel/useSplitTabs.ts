@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { basename } from "../../lib/lineDiff";
 import { folderName, makeTab } from "./tabFactory";
 import type {
@@ -19,12 +25,15 @@ type Options = {
   size: number;
   focusTool: SplitFocusRequest | null | undefined;
   /**
-   * Bump to drop every file view. A file view is a snapshot of one session's
-   * tool output, so switching sessions makes it stale — unlike terminals and
-   * browsers, which own live processes and must survive the switch.
+   * Identity of the chat these tabs belong to. When set, each chat keeps its
+   * own tab set: switching parks the outgoing tabs (webviews and PTYs stay
+   * alive, just unmounted) and restores the incoming chat's. Leave undefined
+   * for a dock whose tabs are global, like the bottom terminal.
    */
-  closeFileViewsKey?: number;
+  sessionKey?: string;
   onCollapse: () => void;
+  /** Re-open the panel for a chat that was left with tabs showing. */
+  onRestore?: () => void;
   onCreateSideTask?: () => Promise<string | null>;
   onCloseSideTask?: (sessionId: string) => void;
 };
@@ -38,6 +47,21 @@ function fileViewKey(view: FileViewPayload): string {
   return `${pathKey(view.root ?? "")}\0${pathKey(view.path)}`;
 }
 
+/** One chat's parked tab set, kept alive until the panel evicts it. */
+type StashedSession = {
+  tabs: SplitTab[];
+  activeId: string | null;
+  showHome: boolean;
+  /** Whether the panel was open when this chat was left. */
+  wasOpen: boolean;
+};
+
+/**
+ * Chats whose tabs stay parked. Each retained browser tab holds a live
+ * webview, so the least recently focused chats give theirs up.
+ */
+const MAX_RETAINED_SESSIONS = 6;
+
 /**
  * Tab model for one split panel instance.
  * Terminals and fileviews are multi-tab; other tools are singletons (focus existing).
@@ -48,8 +72,9 @@ export function useSplitTabs({
   open,
   size,
   focusTool,
-  closeFileViewsKey,
+  sessionKey,
   onCollapse,
+  onRestore,
   onCreateSideTask,
   onCloseSideTask,
 }: Options) {
@@ -64,6 +89,17 @@ export function useSplitTabs({
   const [cwdById, setCwdById] = useState<Record<string, string>>({});
   const activeIdRef = useRef(activeId);
   activeIdRef.current = activeId;
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+  const showHomeRef = useRef(showHome);
+  showHomeRef.current = showHome;
+  const openRef = useRef(open);
+  openRef.current = open;
+  /** Parked tab sets by session key; the focused chat's live in state. */
+  const stashRef = useRef(new Map<string, StashedSession>());
+  /** Session keys, most recently focused first (index 0 is the live one). */
+  const mruRef = useRef<string[]>(sessionKey ? [sessionKey] : []);
+  const sessionKeyRef = useRef(sessionKey);
   const focusNonceRef = useRef<number | null>(null);
   const seededRef = useRef(entry === "terminal");
   const pendingSideTaskTabsRef = useRef(new Set<string>());
@@ -140,6 +176,58 @@ export function useSplitTabs({
     [onCloseSideTask],
   );
 
+  /**
+   * Session switch: park the outgoing chat's tabs and restore the incoming
+   * chat's. Only the mount point moves — a parked terminal keeps its PTY and a
+   * parked browser keeps its webview, so a chat comes back exactly as it was.
+   * Runs as a layout effect so the chat being left never paints under the new
+   * one.
+   */
+  useLayoutEffect(() => {
+    const prev = sessionKeyRef.current;
+    if (sessionKey === undefined || sessionKey === prev) return;
+    sessionKeyRef.current = sessionKey;
+    if (prev !== undefined) {
+      stashRef.current.set(prev, {
+        tabs: tabsRef.current,
+        activeId: activeIdRef.current,
+        showHome: showHomeRef.current,
+        wasOpen: openRef.current,
+      });
+    }
+    const next = stashRef.current.get(sessionKey) ?? null;
+    stashRef.current.delete(sessionKey);
+    setTabs(next?.tabs ?? []);
+    setActiveId(next?.activeId ?? null);
+    setShowHome(next ? next.showHome : entry === "home");
+    // A chat left with tabs showing gets its panel back; one that never opened
+    // a tool must not strand an empty tool picker on screen.
+    if (next && next.tabs.length > 0 && next.wasOpen) onRestore?.();
+    else onCollapse();
+
+    mruRef.current = [
+      sessionKey,
+      ...mruRef.current.filter((key) => key !== sessionKey),
+    ];
+    while (mruRef.current.length > MAX_RETAINED_SESSIONS) {
+      const doomed = mruRef.current.pop()!;
+      const stale = stashRef.current.get(doomed);
+      stashRef.current.delete(doomed);
+      for (const tab of stale?.tabs ?? []) tearDownTab(tab);
+    }
+  }, [entry, onCollapse, onRestore, sessionKey, tearDownTab]);
+
+  /** The parked chat holding `tabId`, when its panel is no longer focused. */
+  const parkedOwnerOf = useCallback(
+    (tabId: string): [string, StashedSession] | null => {
+      for (const [key, parked] of stashRef.current) {
+        if (parked.tabs.some((tab) => tab.id === tabId)) return [key, parked];
+      }
+      return null;
+    },
+    [],
+  );
+
   const openTool = useCallback(
     (
       tool: SplitTool,
@@ -159,11 +247,20 @@ export function useSplitTabs({
             sessionId &&
             pendingSideTaskTabsRef.current.delete(pendingTab.id)
           ) {
-            setTabs((prev) =>
-              prev.map((tab) =>
-                tab.id === pendingTab.id ? { ...tab, sessionId } : tab,
-              ),
-            );
+            const attach = (tab: SplitTab) =>
+              tab.id === pendingTab.id ? { ...tab, sessionId } : tab;
+            // The user may have switched chats while session/new was in
+            // flight — bind the id wherever the placeholder now lives.
+            const parked = parkedOwnerOf(pendingTab.id);
+            if (parked) {
+              const [key, entryState] = parked;
+              stashRef.current.set(key, {
+                ...entryState,
+                tabs: entryState.tabs.map(attach),
+              });
+              return;
+            }
+            setTabs((prev) => prev.map(attach));
             return;
           }
 
@@ -175,6 +272,24 @@ export function useSplitTabs({
           }
 
           pendingSideTaskTabsRef.current.delete(pendingTab.id);
+          const parked = parkedOwnerOf(pendingTab.id);
+          if (parked) {
+            // Same drop, but on a chat the user has since left: no focus or
+            // collapse handling, just retire the dead placeholder.
+            const [key, entryState] = parked;
+            const rest = entryState.tabs.filter(
+              (tab) => tab.id !== pendingTab.id,
+            );
+            stashRef.current.set(key, {
+              ...entryState,
+              tabs: rest,
+              activeId: rest.some((tab) => tab.id === entryState.activeId)
+                ? entryState.activeId
+                : (rest[rest.length - 1]?.id ?? null),
+              showHome: rest.length === 0 ? entry === "home" : entryState.showHome,
+            });
+            return;
+          }
           setTabs((prev) => {
             const idx = prev.findIndex((tab) => tab.id === pendingTab.id);
             if (idx < 0) return prev;
@@ -255,7 +370,14 @@ export function useSplitTabs({
         return [...prev, tab];
       });
     },
-    [entry, onCollapse, onCloseSideTask, onCreateSideTask, placement],
+    [
+      entry,
+      onCollapse,
+      onCloseSideTask,
+      onCreateSideTask,
+      parkedOwnerOf,
+      placement,
+    ],
   );
 
   // External focus (topbar /browser slash / chat file open) — this panel only.
@@ -307,30 +429,6 @@ export function useSplitTabs({
     },
     [finishEmptyTabs, tearDownTab],
   );
-
-  /** Drop stale file views, keeping tabs that own a live process. */
-  const closeFileViewTabs = useCallback(() => {
-    setTabs((prev) => {
-      if (!prev.some((t) => t.tool === "fileview")) return prev;
-      for (const t of prev) {
-        if (t.tool === "fileview") tearDownTab(t);
-      }
-      const next = prev.filter((t) => t.tool !== "fileview");
-      if (next.length === 0) return finishEmptyTabs();
-      if (!next.some((t) => t.id === activeIdRef.current)) {
-        setActiveId(next[next.length - 1]!.id);
-      }
-      return next;
-    });
-  }, [finishEmptyTabs, tearDownTab]);
-
-  // Session switch: retire file views belonging to the session left behind.
-  const closeFileViewsKeyRef = useRef(closeFileViewsKey);
-  useEffect(() => {
-    if (closeFileViewsKeyRef.current === closeFileViewsKey) return;
-    closeFileViewsKeyRef.current = closeFileViewsKey;
-    closeFileViewTabs();
-  }, [closeFileViewTabs, closeFileViewsKey]);
 
   /** Close every tab except `id` (context menu: Close Others). */
   const closeOtherTabs = useCallback(
