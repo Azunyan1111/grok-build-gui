@@ -297,6 +297,7 @@ export function AssistantMessage({
             createdAt={m.createdAt}
             finishedAt={m.finishedAt}
             artifacts={m.artifacts}
+            artifactRoot={m.artifactRoot}
             onOpenFile={onOpenFile}
             workspaceRoot={workspaceRoot}
             highlightQuery={highlightQuery}

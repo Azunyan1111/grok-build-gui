@@ -248,7 +248,7 @@ export function attachAgentSubscriptions(
         ),
       );
     }),
-    window.grok.onTurnArtifacts(({ sessionId, paths }) => {
+    window.grok.onTurnArtifacts(({ sessionId, paths, root }) => {
       if (
         !sessionId ||
         api.isSessionSuppressed(sessionId) ||
@@ -261,8 +261,16 @@ export function attachAgentSubscriptions(
           // Persisted from inside the updater because the turn ordinal is only
           // knowable from current state, and there is no session getter here.
           // Safe under a double-invoked updater: same key, same value.
-          saveTurnArtifacts(sessionId, lastAssistantOrdinal(s.messages), paths);
-          return { ...s, messages: attachTurnArtifacts(s.messages, paths) };
+          saveTurnArtifacts(
+            sessionId,
+            lastAssistantOrdinal(s.messages),
+            paths,
+            root ?? s.cwd,
+          );
+          return {
+            ...s,
+            messages: attachTurnArtifacts(s.messages, paths, root ?? s.cwd),
+          };
         }),
       );
     }),

@@ -130,6 +130,8 @@ export type ChatMessage =
        * turn ends, so this arrives later than `blocks`.
        */
       artifacts?: string[];
+      /** Workspace `artifacts` are relative to, captured when they were found. */
+      artifactRoot?: string;
     }
   | {
       id: string;

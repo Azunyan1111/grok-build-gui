@@ -16,6 +16,11 @@ export type FileChange = {
   newText?: string;
   /** True when we only know the path (no old/new body). */
   pathOnly: boolean;
+  /**
+   * Workspace a relative `path` resolves against. Set for turn artifacts,
+   * whose paths outlive the workspace selection that produced them.
+   */
+  root?: string;
 };
 
 function kindFromTool(tool: ToolCallItem, diff: ToolDiff | null): FileChangeKind {
@@ -123,6 +128,7 @@ export function collectFileChanges(blocks: AssistantBlock[]): FileChange[] {
 export function withTurnArtifacts(
   changes: FileChange[],
   artifacts: string[] | undefined,
+  root?: string,
 ): FileChange[] {
   if (!artifacts || artifacts.length === 0) return changes;
 
@@ -141,6 +147,7 @@ export function withTurnArtifacts(
       kind: "create",
       stats: { added: 0, removed: 0 },
       pathOnly: true,
+      root,
     });
   }
   return [...changes, ...extra];

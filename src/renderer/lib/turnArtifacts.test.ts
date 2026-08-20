@@ -110,3 +110,43 @@ describe("save / restore", () => {
     });
   });
 });
+
+describe("turn artifact workspace root", () => {
+  it("restores the root the artifacts were scanned under", () => {
+    localStorage.clear();
+    saveTurnArtifacts("s1", 0, ["vidu-out/a/prompts.md"], "/work/proj");
+    const restored = restoreTurnArtifacts("s1", [
+      { id: "a", role: "assistant", createdAt: 1, blocks: [] } as never,
+    ]);
+    expect(restored[0]).toMatchObject({
+      artifacts: ["vidu-out/a/prompts.md"],
+      artifactRoot: "/work/proj",
+    });
+  });
+
+  it("keeps the root when a later turn reports none", () => {
+    localStorage.clear();
+    saveTurnArtifacts("s1", 0, ["a.md"], "/work/proj");
+    saveTurnArtifacts("s1", 1, ["b.md"]);
+    const restored = restoreTurnArtifacts("s1", [
+      { id: "a", role: "assistant", createdAt: 1, blocks: [] } as never,
+      { id: "b", role: "assistant", createdAt: 2, blocks: [] } as never,
+    ]);
+    expect(restored[1]).toMatchObject({ artifactRoot: "/work/proj" });
+  });
+
+  it("reads records written before the root was stored", () => {
+    localStorage.clear();
+    localStorage.setItem(
+      "grok.turnArtifacts.v1",
+      JSON.stringify({ s1: { "0": ["legacy.md"] } }),
+    );
+    const restored = restoreTurnArtifacts("s1", [
+      { id: "a", role: "assistant", createdAt: 1, blocks: [] } as never,
+    ]);
+    expect(restored[0]).toMatchObject({
+      artifacts: ["legacy.md"],
+      artifactRoot: undefined,
+    });
+  });
+});

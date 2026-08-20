@@ -834,10 +834,15 @@ const api = {
    * after `agent:turn` stopped — the scan must not delay the end of the turn.
    */
   onTurnArtifacts: (
-    cb: (event: { sessionId: string; paths: string[] }) => void,
+    cb: (event: {
+      sessionId: string;
+      paths: string[];
+      /** Workspace the paths are relative to. */
+      root?: string;
+    }) => void,
   ) =>
     on("agent:turn-artifacts", (p) =>
-      cb(p as { sessionId: string; paths: string[] }),
+      cb(p as { sessionId: string; paths: string[]; root?: string }),
     ),
   onLog: (cb: (entry: { level: string; text: string }) => void) =>
     on("agent:log", (p) => cb(p as { level: string; text: string })),

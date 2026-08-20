@@ -43,7 +43,11 @@ export const zhCN: Record<TranslationKey, string> = {
     "你的密码不会提供给本应用。Grok 会将授权信息安全地存储在本地用户配置中。",
 
   "errors.internalError":
-    "内部错误。请重试；如果当前会话已超出上下文窗口，请新建会话继续。",
+    "智能体返回了错误，但未说明原因。请重试；若持续失败，请检查套餐用量，或新建会话（当前会话可能已超出上下文窗口）。",
+  "errors.internalErrorDetail": "智能体返回错误：{{detail}}",
+  "errors.contextWindowExceeded": "当前会话已超出上下文窗口，请新建会话继续。",
+  "errors.quotaExhausted":
+    "当前套餐额度已用尽，或请求被限流。请检查订阅用量后重试。",
 
   "settings.title": "设置",
   "settings.subtitle": "更改会自动保存。",

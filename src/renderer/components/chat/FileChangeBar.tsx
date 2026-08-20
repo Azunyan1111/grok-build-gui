@@ -109,6 +109,7 @@ export function FileChangeBar({ changes, onOpen, workspaceRoot }: Props) {
                 onClick={() => {
                   onOpen({
                     path: c.path,
+                    root: c.root || workspaceRoot,
                     mode,
                     oldText: c.oldText,
                     newText: c.newText,

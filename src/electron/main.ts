@@ -33,6 +33,7 @@ import {
   computerUseManager,
   type ComputerUseStatus,
 } from "./computerUse.js";
+import { pickDefaultCwd } from "./defaultCwd.js";
 import { registerFilesIpc } from "./filesIpc.js";
 import {
   checkForUpdates,
@@ -910,15 +911,13 @@ function registerIpc() {
     });
   }
 
-  ipcMain.handle("app:get-default-cwd", () => {
-    // Prefer the process cwd (e.g. repo root when launched via npm run dev).
-    // Fall back to home so packaged launches still have a workspace.
-    const cwd = process.cwd();
-    if (cwd && cwd !== "/" && !cwd.includes("Electron.app")) {
-      return cwd;
-    }
-    return app.getPath("home");
-  });
+  ipcMain.handle("app:get-default-cwd", () =>
+    pickDefaultCwd({
+      cwd: process.cwd(),
+      exePath: app.getPath("exe"),
+      home: app.getPath("home"),
+    }),
+  );
 
   ipcMain.handle("app:get-task-workspace-root", () => getTaskWorkspaceRoot());
 

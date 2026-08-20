@@ -28,6 +28,7 @@ import {
   grokAgentStdioArgs,
   type GrokSandboxProfile,
 } from "./agentProcess.js";
+import { describeAgentError } from "./agentError.js";
 import { modelResyncArgs } from "./modelResync.js";
 import {
   PermissionProfileStore,
@@ -2635,7 +2636,9 @@ export class SessionManager {
       ) {
         result = { ok: true };
       } else {
-        const error = e instanceof Error ? e.message : String(e);
+        // Keep the JSON-RPC `data` payload: without it every backend failure
+        // reaches the UI as the bare code text "Internal error".
+        const error = describeAgentError(e);
         this.send("agent:turn", {
           status: "error",
           sessionId: targetSessionId,
@@ -2685,7 +2688,9 @@ export class SessionManager {
         since: scan.startedAt,
       });
       if (paths.length > 0) {
-        this.send("agent:turn-artifacts", { sessionId, paths });
+        // The paths are workspace-relative, so the chip is only resolvable
+        // together with the root they were scanned under.
+        this.send("agent:turn-artifacts", { sessionId, paths, root: scan.root });
       }
     } catch {
       // Best-effort enrichment — never surface a scan failure as a turn error.

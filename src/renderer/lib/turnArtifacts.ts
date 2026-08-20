@@ -17,13 +17,42 @@ const KEY = "grok.turnArtifacts.v1";
 /** Keep the store small — old sessions are evicted oldest-first. */
 const MAX_SESSIONS = 50;
 
-type Store = Record<string, Record<string, string[]>>;
+type SessionEntry = {
+  /**
+   * Workspace the paths are relative to. Without it a restored chip resolves
+   * against whatever workspace happens to be selected after a restart.
+   * Absent in records written before this was stored.
+   */
+  root?: string;
+  turns: Record<string, string[]>;
+};
+type Store = Record<string, SessionEntry>;
+
+/** Records written before `root` was stored held the turn map directly. */
+function toEntry(raw: unknown): SessionEntry | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const turns = obj.turns;
+  if (turns && typeof turns === "object") {
+    return {
+      root: typeof obj.root === "string" ? obj.root : undefined,
+      turns: turns as Record<string, string[]>,
+    };
+  }
+  return { turns: obj as Record<string, string[]> };
+}
 
 function read(): Store {
   try {
     const raw = localStorage.getItem(KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? (parsed as Store) : {};
+    if (!parsed || typeof parsed !== "object") return {};
+    const store: Store = {};
+    for (const [id, value] of Object.entries(parsed)) {
+      const entry = toEntry(value);
+      if (entry) store[id] = entry;
+    }
+    return store;
   } catch {
     return {};
   }
@@ -50,11 +79,16 @@ export function saveTurnArtifacts(
   sessionId: string,
   ordinal: number,
   paths: string[],
+  root?: string,
 ): void {
   if (!sessionId || ordinal < 0 || paths.length === 0) return;
 
   const store = read();
-  const session = { ...(store[sessionId] ?? {}), [String(ordinal)]: paths };
+  const prev = store[sessionId];
+  const session: SessionEntry = {
+    root: root ?? prev?.root,
+    turns: { ...(prev?.turns ?? {}), [String(ordinal)]: paths },
+  };
   delete store[sessionId];
   // Re-inserting moves the session to the end, so the oldest key is evicted.
   store[sessionId] = session;
@@ -79,10 +113,10 @@ export function restoreTurnArtifacts(
   const next = messages.map((msg) => {
     if (msg.role !== "assistant") return msg;
     ordinal += 1;
-    const paths = session[String(ordinal)];
+    const paths = session.turns[String(ordinal)];
     if (!paths || paths.length === 0) return msg;
     changed = true;
-    return { ...msg, artifacts: paths };
+    return { ...msg, artifacts: paths, artifactRoot: session.root };
   });
   return changed ? next : messages;
 }

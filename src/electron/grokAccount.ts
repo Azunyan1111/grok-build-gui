@@ -70,7 +70,7 @@ type GrokAuthEntry = {
   principal_id?: string;
 };
 
-type BillingCreditsConfig = {
+export type BillingCreditsConfig = {
   currentPeriod?: {
     type?: string;
     start?: string;
@@ -85,6 +85,32 @@ type BillingCreditsConfig = {
   billingPeriodStart?: string;
   billingPeriodEnd?: string;
 };
+
+/**
+ * Credit usage for the current period, or `null` when the response carries no
+ * billing config at all.
+ *
+ * The billing payload is proto3 JSON, which omits scalar fields at their
+ * default — so a period with exactly 0% used comes back with no
+ * `creditUsagePercent` key. Reading that as "no usage data" blanks the gauge
+ * for the first requests of every billing week.
+ */
+export function readCreditUsagePercent(
+  root: BillingCreditsConfig | null | undefined,
+): number | null {
+  if (!root) return null;
+  const raw = root.creditUsagePercent;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.max(0, Math.min(100, raw));
+  }
+  // Only a response that actually describes a period can claim 0%.
+  const hasPeriod = !!(
+    root.currentPeriod?.start ||
+    root.currentPeriod?.end ||
+    root.billingPeriodStart
+  );
+  return hasPeriod ? 0 : null;
+}
 
 const BILLING_CREDITS_URL =
   "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
@@ -379,10 +405,7 @@ export async function fetchGrokUsage(): Promise<GrokUsage> {
         ? (creditsRes.data as { config?: BillingCreditsConfig }).config ?? null
         : null;
 
-    const creditUsagePercent =
-      creditsRoot && typeof creditsRoot.creditUsagePercent === "number"
-        ? Math.max(0, Math.min(100, creditsRoot.creditUsagePercent))
-        : null;
+    const creditUsagePercent = readCreditUsagePercent(creditsRoot);
 
     const productUsage = (creditsRoot?.productUsage ?? [])
       .filter((row) => row && typeof row.product === "string")

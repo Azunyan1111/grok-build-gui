@@ -579,13 +579,14 @@ export function markAssistantDone(messages: ChatMessage[]): ChatMessage[] {
 export function attachTurnArtifacts(
   messages: ChatMessage[],
   paths: string[],
+  root?: string,
 ): ChatMessage[] {
   if (paths.length === 0) return messages;
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const msg = messages[i];
     if (msg?.role !== "assistant") continue;
     const next = messages.slice();
-    next[i] = { ...msg, artifacts: paths };
+    next[i] = { ...msg, artifacts: paths, artifactRoot: root ?? msg.artifactRoot };
     return next;
   }
   return messages;

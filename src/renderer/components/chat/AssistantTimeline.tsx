@@ -36,6 +36,7 @@ export function AssistantTimeline({
   createdAt,
   finishedAt,
   artifacts,
+  artifactRoot,
   onOpenFile,
   workspaceRoot,
   highlightQuery,
@@ -46,6 +47,8 @@ export function AssistantTimeline({
   finishedAt?: number;
   /** Files found on disk after the turn that no tool call reported. */
   artifacts?: string[];
+  /** Workspace those files are relative to. */
+  artifactRoot?: string;
   onOpenFile?: (req: OpenFileViewRequest) => void;
   workspaceRoot?: string;
   /** When set, highlight matches in text / thoughts (search jump). */
@@ -95,7 +98,7 @@ export function AssistantTimeline({
   );
 
   const fileChanges = done
-    ? withTurnArtifacts(collectFileChanges(blocks), artifacts)
+    ? withTurnArtifacts(collectFileChanges(blocks), artifacts, artifactRoot)
     : [];
 
   return (

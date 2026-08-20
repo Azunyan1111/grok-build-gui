@@ -44,7 +44,12 @@ export const en = {
     "Your password is never shared with this app. Grok stores the authorization securely in your local user profile.",
 
   "errors.internalError":
-    "Internal error. Try again, or start a new chat if this one has run out of context window space.",
+    "The agent failed without reporting a reason. Try again — if it keeps failing, check your plan usage, or start a new chat in case this one ran out of context window space.",
+  "errors.internalErrorDetail": "The agent failed: {{detail}}",
+  "errors.contextWindowExceeded":
+    "This chat has run out of context window space. Start a new chat to continue.",
+  "errors.quotaExhausted":
+    "Your plan's usage limit is exhausted, or requests are being rate limited. Check your subscription usage, then try again.",
 
   "settings.title": "Settings",
   "settings.subtitle": "Changes save automatically.",

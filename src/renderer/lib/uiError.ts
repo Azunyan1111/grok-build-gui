@@ -46,6 +46,41 @@ const KNOWN_ERRORS: Readonly<Record<string, TranslationKey>> = {
     "composer.voiceInvalidResponse",
 };
 
+const CONTEXT_WINDOW_PATTERNS: readonly RegExp[] = [
+  /context[ _-]?(window|length|limit|size)/i,
+  /context_length_exceeded/i,
+  /maximum context/i,
+  /(prompt|input|message) is too long/i,
+  /too many tokens/i,
+  /token limit/i,
+];
+
+const QUOTA_PATTERNS: readonly RegExp[] = [
+  /quota/i,
+  /credits?\b/i,
+  /billing/i,
+  /insufficient[ _-]?(funds|balance|credit)/i,
+  /(usage|plan|monthly|daily) limit/i,
+  /rate[ _-]?limit/i,
+  /too many requests/i,
+  /\b429\b/,
+  /out of (credits|tokens|usage)/i,
+  /subscription/i,
+  /payment required/i,
+  /\b402\b/,
+];
+
+/**
+ * `null` when `raw` is not the agent's generic internal error; otherwise the
+ * cause appended after it (empty string when the agent sent none).
+ */
+function internalErrorDetail(raw: string): string | null {
+  const match = /internal(?: json-?rpc)? error/i.exec(raw);
+  if (!match) return null;
+  const rest = raw.slice(match.index + match[0].length);
+  return rest.replace(/^[\s:;,.\u2014\u2013-]+/, "").trim();
+}
+
 export function localizeUiError(
   error: string | null | undefined,
   t: TFunction<"translation">,
@@ -64,11 +99,23 @@ export function localizeUiError(
     return t("auth.sessionExpired");
   }
 
-  // The agent reports context-window overflows (and other fatal backend
-  // failures) as a generic "Internal error" without a structured code. Match
-  // case-insensitively so the raw English string never leaks into the chat.
-  if (raw.toLowerCase().includes("internal error")) {
-    return t("errors.internalError");
+  // Fatal backend failures reach us as a generic "Internal error", sometimes
+  // with the real cause appended from the JSON-RPC `data` payload. Classify on
+  // that detail — blaming the context window for every one of them sends users
+  // to start a new chat when the account simply ran out of quota.
+  const detail = internalErrorDetail(raw);
+  const classified = detail ?? raw;
+
+  if (CONTEXT_WINDOW_PATTERNS.some((re) => re.test(classified))) {
+    return t("errors.contextWindowExceeded");
+  }
+  if (QUOTA_PATTERNS.some((re) => re.test(classified))) {
+    return t("errors.quotaExhausted");
+  }
+  if (detail !== null) {
+    return detail
+      ? t("errors.internalErrorDetail", { detail })
+      : t("errors.internalError");
   }
 
   return raw;
