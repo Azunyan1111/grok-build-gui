@@ -3,13 +3,12 @@ const grokManifest = require("./runtime/grok-build.json");
 const computerUseManifest = require("./runtime/open-computer-use.json");
 
 /**
- * Signing identity, from the environment only. A committed default would
- * publish the signer's name and Team ID into an open repository, and on
- * another machine it would silently pick a certificate nobody chose. Unset
- * means unsigned: the build runs locally, but Squirrel.Mac cannot install an
- * update over it — see docs/process/MAC_RELEASE.md.
+ * Signing identity, supplied by the release script. Public releases use the
+ * stable self-signed "Grok Desktop" certificate so no legal name or Apple Team
+ * ID is exposed. Unset means unsigned: the build runs locally, but Squirrel.Mac
+ * cannot install an update over it — see docs/process/MAC_RELEASE.md.
  *
- *   MAC_SIGNING_IDENTITY="Developer ID Application: Example Ltd (ABCDE12345)"
+ *   MAC_SIGNING_IDENTITY="Grok Desktop"
  *   MAC_SIGNING_IDENTITY=-   ad-hoc; local smoke tests only, breaks updates
  */
 const developerIdApplication = process.env.MAC_SIGNING_IDENTITY ?? null;
@@ -93,6 +92,9 @@ module.exports = {
     category: "public.app-category.developer-tools",
     icon: "resources/icon.icns",
     identity: developerIdApplication,
+    // Self-signed certificates cannot use Apple's trusted timestamp service.
+    // Disabling it also avoids a network wait for every signed resource.
+    timestamp: "none",
     hardenedRuntime: true,
     notarize: false,
     entitlements: "resources/entitlements.mac.plist",
@@ -122,7 +124,9 @@ module.exports = {
     icon: "resources/icon.icns",
     iconSize: 112,
     iconTextSize: 15,
-    sign: false,
+    // Sign before electron-builder generates the blockmap and update manifest,
+    // otherwise a post-build signature would invalidate their size and hash.
+    sign: true,
     window: {
       width: 760,
       height: 460,

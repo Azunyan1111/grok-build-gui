@@ -134,4 +134,4 @@ will download updates forever without being able to install them. Back it up.
   `~/Library/Logs/Grok GUI/main.log`.
 - An unsigned or ad-hoc-signed build (`MAC_SIGNING_IDENTITY=-`) downloads but
   cannot install: Squirrel refuses to replace a bundle whose signature does not
-  match. Use the real Developer ID build for level 3.
+  match. Use a release signed with the stable `Grok Desktop` identity for level 3.
