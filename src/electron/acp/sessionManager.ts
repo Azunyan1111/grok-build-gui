@@ -11,9 +11,12 @@ import type { ChatMessage } from "../../renderer/types/chat";
 import { computerUseManager } from "../computerUse.js";
 import { findGrok } from "../findGrok.js";
 import {
+  describeImagesForBlindModel,
   managedModelEnvironment,
   syncManagedModelConfig,
+  type ImageFallbackOutcome,
 } from "../providers/modelSync.js";
+import { renderVisionTranscript } from "../providers/visionFallback.js";
 import {
   normalizeAgentSlashCommands,
   type SlashCommand,
@@ -2466,6 +2469,41 @@ export class SessionManager {
     }
   }
 
+  /**
+   * Have a vision model read attachments the active model cannot decode.
+   * Throws when the model is blind and no fallback can stand in: a turn that
+   * silently drops the user's screenshot is worse than a clear refusal.
+   */
+  private async transcribeImagesForModel(
+    images: Array<{ data: string; mimeType: string }>,
+    userText: string,
+  ): Promise<ImageFallbackOutcome> {
+    const startedAt = Date.now();
+    const outcome = await describeImagesForBlindModel({
+      modelKey: this.modelId,
+      images,
+      userText,
+    });
+    if (outcome.status === "unavailable") {
+      const label =
+        this.availableModels.find((m) => m.modelId === this.modelId)?.name ??
+        this.modelId ??
+        "The selected model";
+      throw new Error(`${label} cannot read images. ${outcome.reason}`);
+    }
+    if (outcome.status === "described") {
+      // The elapsed time matters here: a transcription is a second network
+      // round-trip, and a slow vision provider is the usual reason a turn
+      // seems to stall before the model has even been asked anything.
+      const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+      this.send("agent:log", {
+        level: "info",
+        text: `${outcome.model} read ${images.length} image(s) for ${this.modelId} in ${seconds}s`,
+      });
+    }
+    return outcome;
+  }
+
   async prompt(
     text: string,
     images?: Array<{ data: string; mimeType: string }>,
@@ -2543,7 +2581,15 @@ export class SessionManager {
     this.send("agent:turn", { status: "started", sessionId: targetSessionId });
 
     let result: { ok: boolean; error?: string } = { ok: true };
+    // A text-only model (DeepSeek V4 Flash/Pro, …) rejects image blocks, so a
+    // vision model transcribes them and the text travels in their place.
+    let vision: ImageFallbackOutcome = { status: "not-needed" };
     try {
+      if (!abort.signal.aborted) {
+        vision = await this.transcribeImagesForModel(imgs, trimmed);
+      }
+      // Transcription is a network round-trip of its own, so re-check: the user
+      // may have cancelled while it ran.
       if (!abort.signal.aborted) {
         // ACP content blocks: images + files, then text.
         const fileBlocks: Array<Record<string, unknown>> = fileParts.map(
@@ -2588,16 +2634,29 @@ export class SessionManager {
                 : "See attachments."
             : "");
 
+        const transcript =
+          vision.status === "described"
+            ? renderVisionTranscript({
+                text: vision.text,
+                model: vision.model,
+                imageCount: imgs.length,
+              })
+            : null;
+
+        // A transcribed image is dropped rather than sent: the model cannot
+        // decode it, and the transcript is the only view of it that it gets.
         const promptBlocks: Array<Record<string, unknown>> = [
-          ...imgs.map((img) => ({
-            type: "image",
-            data: img.data,
-            mimeType: img.mimeType,
-          })),
+          ...(transcript
+            ? []
+            : imgs.map((img) => ({
+                type: "image",
+                data: img.data,
+                mimeType: img.mimeType,
+              }))),
           ...fileBlocks,
           {
             type: "text",
-            text: fallbackText,
+            text: transcript ? `${fallbackText}\n\n${transcript}` : fallbackText,
           },
         ];
 

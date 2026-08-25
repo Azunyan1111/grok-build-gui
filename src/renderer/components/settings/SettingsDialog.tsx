@@ -7,6 +7,7 @@ import { sttLanguageSettingOptions } from "../../lib/sttLanguage";
 import { ComputerUseSettings } from "./ComputerUseSettings";
 import { ProviderSettings } from "./ProviderSettings";
 import { ModelEndpointSettings } from "./ModelEndpointSettings";
+import { VisionFallbackSettings } from "./VisionFallbackSettings";
 import { UpdateSettings } from "./UpdateSettings";
 import type { AppUpdate } from "../../hooks/useAppUpdate";
 import {
@@ -430,6 +431,7 @@ export function SettingsDialog({
               <>
                 <ProviderSettings />
                 <ModelEndpointSettings />
+                <VisionFallbackSettings />
               </>
             ) : null}
 

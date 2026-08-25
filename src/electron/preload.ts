@@ -33,6 +33,10 @@ import type {
 import type { EndpointPreset } from "./providers/endpointPresets";
 import type { DiscoveredModel, DiscoveryResult } from "./providers/modelDiscovery";
 import type {
+  VisionFallbackInput,
+  VisionFallbackSettings,
+} from "./providers/visionFallback";
+import type {
   ComputerUsePermissionCheckResult,
   ComputerUseStatus,
 } from "./computerUse";
@@ -83,6 +87,8 @@ export type {
   DiscoveredModel,
   DiscoveryResult,
   EndpointPreset,
+  VisionFallbackInput,
+  VisionFallbackSettings,
 };
 export type { ComputerUsePermissionCheckResult, ComputerUseStatus };
 export type { SlashCommand };
@@ -560,6 +566,16 @@ const api = {
   > => ipcRenderer.invoke("provider:endpoints:save", input),
   removeModelEndpoint: (id: string): Promise<{ ok: true }> =>
     ipcRenderer.invoke("provider:endpoints:remove", id),
+  /**
+   * Image fallback used when the selected model is text-only. As with
+   * endpoints, the key goes in and only `hasApiKey` comes back.
+   */
+  getVisionFallback: (): Promise<VisionFallbackSettings> =>
+    ipcRenderer.invoke("provider:vision:get"),
+  saveVisionFallback: (
+    input: VisionFallbackInput,
+  ): Promise<VisionFallbackSettings> =>
+    ipcRenderer.invoke("provider:vision:save", input),
   /**
    * Launch the bundled Grok Build interactive TUI in the system terminal.
    * Optional cwd defaults to the active workspace on the main process.

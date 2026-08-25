@@ -59,10 +59,13 @@ import {
 import { ENDPOINT_PRESETS } from "./providers/endpointPresets.js";
 import {
   discoverEndpointModels,
+  getVisionFallbackSettings,
   listEndpoints,
   removeEndpoint,
   saveEndpoint,
+  saveVisionFallbackSettings,
 } from "./providers/modelSync.js";
+import type { VisionFallbackInput } from "./providers/visionFallback.js";
 import {
   cancelGrokLogin,
   loginToGrok,
@@ -1011,6 +1014,17 @@ function registerIpc() {
     await reconnectAgentForModelChange();
     return { ok: true };
   });
+
+  /**
+   * Image fallback for text-only models. Nothing about the agent's model
+   * catalog changes, so this needs no reconnect.
+   */
+  ipcMain.handle("provider:vision:get", () => getVisionFallbackSettings());
+
+  ipcMain.handle(
+    "provider:vision:save",
+    (_e, input: VisionFallbackInput) => saveVisionFallbackSettings(input),
+  );
 
   /**
    * Open the system terminal and run the bundled interactive Grok Build TUI

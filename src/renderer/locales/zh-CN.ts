@@ -577,6 +577,18 @@ export const zhCN: Record<TranslationKey, string> = {
   "endpoints.loading": "拉取中…",
   "endpoints.save": "保存",
 
+  "vision.title": "图片识别",
+  "vision.description":
+    "DeepSeek V4 Flash、V4 Pro 等纯文本模型无法接收图片。选中这类模型时，附带的图片会先交给下面的模型解析，再把解析出的文字发给它。",
+  "vision.enable": "用备用模型识图",
+  "vision.enableHint": "关闭时，给纯文本模型发图片会直接报错，而不是悄悄丢弃。",
+  "vision.model": "识图模型",
+  "vision.baseUrl": "接口地址",
+  "vision.apiKey": "API Key",
+  "vision.keyPlaceholder": "粘贴 OpenRouter API Key",
+  "vision.sharedKeyHint": "留空则复用已保存的 OpenRouter 端点的 Key。",
+  "vision.applyHint": "对下一条消息生效。",
+
   "models.groupBuiltin": "内置",
   "models.groupOAuth": "OAuth",
   "models.groupCustom": "自定义模型",

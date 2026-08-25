@@ -613,6 +613,20 @@ export const en = {
   "endpoints.loading": "Fetching…",
   "endpoints.save": "Save",
 
+  "vision.title": "Image reading",
+  "vision.description":
+    "Text-only models such as DeepSeek V4 Flash and V4 Pro cannot take an image. When one is selected, attachments are transcribed by the model below and the transcription is sent in their place.",
+  "vision.enable": "Read images with a fallback model",
+  "vision.enableHint":
+    "Without this, attaching an image to a text-only model is refused instead of silently dropped.",
+  "vision.model": "Vision model",
+  "vision.baseUrl": "Endpoint URL",
+  "vision.apiKey": "API key",
+  "vision.keyPlaceholder": "Paste your OpenRouter API key",
+  "vision.sharedKeyHint":
+    "Leave the key blank to reuse the key from a saved OpenRouter endpoint.",
+  "vision.applyHint": "Applies to the next message you send.",
+
   "models.groupBuiltin": "Built-in",
   "models.groupOAuth": "OAuth",
   "models.groupCustom": "Custom models",

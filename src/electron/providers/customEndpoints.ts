@@ -48,6 +48,12 @@ export type CustomEndpoint = {
   supportsReasoningEffort: boolean;
 };
 
+/** Where a generated `[model.<key>]` entry came from. */
+export type ManagedModelSource = {
+  endpoint: CustomEndpoint;
+  model: CustomModel;
+};
+
 export type CustomEndpointInput = {
   id?: string;
   label: string;
@@ -224,13 +230,12 @@ export class CustomEndpointStore {
   }
 
   /**
-   * Model entries for the agent's config. Keys are deduplicated across
-   * endpoints: two gateways may well both expose `deepseek-chat`.
+   * Every model paired with the config key it is published under. Keys are
+   * deduplicated across endpoints: two gateways may well both expose
+   * `deepseek-chat`.
    */
-  managedModels(): ManagedModel[] {
+  private *configEntries(): Generator<ManagedModelSource & { key: string }> {
     const used = new Set<string>();
-    const managed: ManagedModel[] = [];
-
     for (const endpoint of this.list()) {
       for (const model of endpoint.models) {
         let key = customModelConfigKey(model.id);
@@ -239,30 +244,51 @@ export class CustomEndpointStore {
           if (used.has(key)) continue;
         }
         used.add(key);
-        const reasoning = reasoningConfigForModel(endpoint, model);
-        managed.push({
-          key,
-          model: model.id,
-          name: model.label,
-          baseUrl: endpoint.baseUrl,
-          envKey: endpointEnvKey(endpoint.id),
-          apiBackend: endpoint.apiBackend,
-          contextWindow: model.contextWindow,
-          ...(model.maxCompletionTokens
-            ? { maxCompletionTokens: model.maxCompletionTokens }
-            : {}),
-          ...(reasoning
-            ? {
-                reasoningEfforts: reasoning.efforts,
-                ...(reasoning.defaultEffort
-                  ? { defaultReasoningEffort: reasoning.defaultEffort }
-                  : {}),
-              }
-            : {}),
-        });
+        yield { key, endpoint, model };
       }
     }
+  }
+
+  /** Model entries for the agent's config. */
+  managedModels(): ManagedModel[] {
+    const managed: ManagedModel[] = [];
+    for (const { key, endpoint, model } of this.configEntries()) {
+      const reasoning = reasoningConfigForModel(endpoint, model);
+      managed.push({
+        key,
+        model: model.id,
+        name: model.label,
+        baseUrl: endpoint.baseUrl,
+        envKey: endpointEnvKey(endpoint.id),
+        apiBackend: endpoint.apiBackend,
+        contextWindow: model.contextWindow,
+        ...(model.maxCompletionTokens
+          ? { maxCompletionTokens: model.maxCompletionTokens }
+          : {}),
+        ...(reasoning
+          ? {
+              reasoningEfforts: reasoning.efforts,
+              ...(reasoning.defaultEffort
+                ? { defaultReasoningEffort: reasoning.defaultEffort }
+                : {}),
+            }
+          : {}),
+      });
+    }
     return managed;
+  }
+
+  /**
+   * Recover the endpoint and upstream model behind a `[model.<key>]` entry. The
+   * agent only reports the key, so capability checks start here.
+   */
+  managedModelSource(configKey: string): ManagedModelSource | null {
+    for (const entry of this.configEntries()) {
+      if (entry.key === configKey) {
+        return { endpoint: entry.endpoint, model: entry.model };
+      }
+    }
+    return null;
   }
 
   /** Credentials to inject into the agent process environment. */
