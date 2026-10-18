@@ -1895,13 +1895,15 @@ export class SessionManager {
         acp.methods.agent.session.new,
         {
           cwd: targetCwd,
+          // ACP requires the field even when the client exposes no MCP servers.
+          mcpServers: [],
           // Agent reads `yoloMode` + `autoMode` booleans (not only permission_mode).
           // `sessionId` is honoured for new sessions, which is what lets the
           // worktree registry row point at the chat we are about to open.
           _meta: presetSessionId
             ? { ...permissionMeta(profile.approval), sessionId: presetSessionId }
             : permissionMeta(profile.approval),
-        },
+        } satisfies acp.NewSessionRequest,
       )) as {
         sessionId: string;
         models?: unknown;
@@ -2075,9 +2077,11 @@ export class SessionManager {
         {
           sessionId,
           cwd,
+          // ACP requires the field even when the client exposes no MCP servers.
+          mcpServers: [],
           // Re-seed yolo/auto for this session on reconnect (CLI-compatible).
           _meta: permissionMeta(profile.approval),
-        },
+        } satisfies acp.LoadSessionRequest,
       )) as {
         models?: unknown;
       };
