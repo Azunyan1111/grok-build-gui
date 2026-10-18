@@ -1,20 +1,17 @@
 import {
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import type { ModelState, PermissionMode } from "../../../electron/preload";
-import { groupModels } from "../../lib/modelGroups";
 import { ModelIcon } from "../ModelIcon";
 import { modelPickerMeta, type ModelPickerTag } from "./modelPickerMeta";
 import {
   CaptureIcon,
   CheckIcon,
   ChevronDownIcon,
-  EditModelIcon,
   PaperclipIcon,
   PlusIcon,
   ShieldIcon,
@@ -213,12 +210,10 @@ export function ModelMenu({
   disabled,
   models,
   onModelChange,
-  onConfigureModels,
 }: Common & {
   models: ModelState;
   /** modelId + optional reasoning effort (high | medium | low | …). */
   onModelChange: (modelId: string, reasoningEffort?: string | null) => void;
-  onConfigureModels?: () => void;
 }) {
   const { t } = useTranslation();
   const [hoveredModel, setHoveredModel] = useState<HoveredModel | null>(null);
@@ -268,10 +263,6 @@ export function ModelMenu({
   const selectableModels = autoModel
     ? modelOptions.filter((m) => m.modelId !== autoModel.modelId)
     : modelOptions;
-  const modelGroups = useMemo(
-    () => groupModels(selectableModels),
-    [selectableModels],
-  );
   const detailModel = hoveredModel
     ? modelOptions.find((m) => m.modelId === hoveredModel.modelId)
     : null;
@@ -392,70 +383,42 @@ export function ModelMenu({
                 ) : null}
               </button>
             ) : null}
-            {modelGroups.map((group, groupIndex) => (
-              <div key={group.id} role="group" aria-label={t(group.labelKey)}>
-                {modelGroups.length > 1 ? (
-                  <>
-                    {groupIndex > 0 ? (
-                      <div className="composer-menu-divider" />
-                    ) : null}
-                    <div className="composer-menu-title">
-                      {t(group.labelKey)}
-                    </div>
-                  </>
-                ) : null}
-                {group.models.map((m) => {
-                  const selected = m.modelId === models.currentModelId;
-                  const meta = modelPickerMeta(m);
-                  return (
-                    <button
-                      key={m.modelId}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={selected}
-                      className={`composer-menu-item composer-model-row${
-                        selected ? " active" : ""
-                      }`}
-                      onClick={() => selectModel(m.modelId)}
-                      onMouseEnter={(event) => hoverModel(event, m.modelId)}
-                    >
-                      <span className="composer-menu-item-label model-option">
-                        <ModelIcon modelId={m.modelId} name={m.name} />
-                        <span className="composer-model-name">
-                          {m.name || m.modelId}
-                        </span>
-                        {meta.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className={`composer-model-tag composer-model-tag-${tag}`}
-                          >
-                            {modelTagLabel(tag, t)}
-                          </span>
-                        ))}
+            {selectableModels.map((m) => {
+              const selected = m.modelId === models.currentModelId;
+              const meta = modelPickerMeta(m);
+              return (
+                <button
+                  key={m.modelId}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  className={`composer-menu-item composer-model-row${
+                    selected ? " active" : ""
+                  }`}
+                  onClick={() => selectModel(m.modelId)}
+                  onMouseEnter={(event) => hoverModel(event, m.modelId)}
+                >
+                  <span className="composer-menu-item-label model-option">
+                    <ModelIcon modelId={m.modelId} name={m.name} />
+                    <span className="composer-model-name">
+                      {m.name || m.modelId}
+                    </span>
+                    {meta.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className={`composer-model-tag composer-model-tag-${tag}`}
+                      >
+                        {modelTagLabel(tag, t)}
                       </span>
-                      {meta.rate ? (
-                        <span className="composer-model-rate">{meta.rate}</span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
+                    ))}
+                  </span>
+                  {meta.rate ? (
+                    <span className="composer-model-rate">{meta.rate}</span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
-
-          <div className="composer-menu-divider" />
-          <button
-            type="button"
-            role="menuitem"
-            className="composer-menu-item composer-model-configure"
-            onClick={() => {
-              closeMenu();
-              onConfigureModels?.();
-            }}
-          >
-            <EditModelIcon />
-            <span>{t("composer.configureCustomModel")}</span>
-          </button>
 
           {detailModel && detailMeta ? (
             <div

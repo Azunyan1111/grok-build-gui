@@ -28,7 +28,7 @@ export const BUILTIN_SLASH_COMMANDS: SlashCommand[] = [
   },
   {
     // First-turn fallback: ACP publishes the authoritative command list once
-    // a real session exists. The pinned 0.2.111 runtime supports /goal.
+    // a real session exists. The pinned runtime supports /goal.
     name: "goal",
     description: "Set, manage, or check an autonomous goal.",
     inputHint:

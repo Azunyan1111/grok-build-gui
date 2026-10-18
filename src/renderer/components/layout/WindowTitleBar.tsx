@@ -32,7 +32,7 @@ function PanelLeftIcon() {
 const MENU_IDS: AppMenuId[] = ["file", "edit", "view", "window", "help"];
 
 /**
- * Windows-only custom title bar (Codex / ChatGPT-style):
+ * Windows-only custom title bar:
  * [collapse] [File] [Edit] [View] [Window] [Help] …… native min/max/close
  *
  * Mounted as a sibling of `.app` inside `.app-shell` so drag regions work.

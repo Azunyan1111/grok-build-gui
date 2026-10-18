@@ -12,7 +12,7 @@ Follow [AGENT_GUIDELINES.md](AGENT_GUIDELINES.md): confirm → small step → ve
 - Headless ACP smoke OK (`@agentclientprotocol/sdk` + local `grok`).
 - Charter default tech: Electron (not Tauri). Disposable upstream sources live
   under ignored `tmp/`.
-- Grok Build 0.2.111 is pinned by manifest, downloaded into gitignored
+- Grok Build 1.0.62 is pinned by manifest, downloaded into gitignored
   `thirdparty/`, and bundled into the macOS Apple Silicon `.app` with license
   notices. Its self-updater is disabled under the GUI.
 - Windows x64 and ARM64 Grok Build artifacts are pinned by the same manifest.

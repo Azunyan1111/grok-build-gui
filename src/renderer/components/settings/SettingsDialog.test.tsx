@@ -78,14 +78,11 @@ describe("SettingsDialog", () => {
     expect(screen.getByLabelText("Terminal theme")).toBeTruthy();
 
     rerender(
-      <SettingsDialog open={false} initialSection="providers" {...props} />,
+      <SettingsDialog open={false} initialSection="update" {...props} />,
     );
-    rerender(<SettingsDialog open initialSection="providers" {...props} />);
+    rerender(<SettingsDialog open initialSection="update" {...props} />);
 
-    expect(
-      await screen.findByRole("heading", { name: "Model providers" }),
-    ).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Endpoints" })).toBeTruthy();
+    expect(await screen.findByText("Current version")).toBeTruthy();
     expect(screen.queryByLabelText("Terminal theme")).toBeNull();
   });
 

@@ -10,10 +10,6 @@ import { HistoryMessageAccumulator } from "../../renderer/lib/sessionUpdate";
 import type { ChatMessage } from "../../renderer/types/chat";
 import { findGrok } from "../findGrok.js";
 import {
-  managedModelEnvironment,
-  syncManagedModelConfig,
-} from "../providers/modelSync.js";
-import {
   normalizeAgentSlashCommands,
   type SlashCommand,
 } from "../slashCommands.js";
@@ -575,7 +571,6 @@ export class SessionManager {
   private modelSyncs = new Map<string, Promise<void>>();
   /** Serialize connect/disconnect so React StrictMode double-mount cannot race. */
   private connectChain: Promise<unknown> = Promise.resolve();
-  private runtimePreparation: Promise<void> | null = null;
   private sideTaskSessionIds = new Set(readPersistedSideTaskIds());
   /** ACP-published commands are session-scoped agent truth. */
   private availableCommandsBySession = new Map<string, SlashCommand[]>();
@@ -824,30 +819,6 @@ export class SessionManager {
     }
   }
 
-  private prepareRuntime(): Promise<void> {
-    if (!this.runtimePreparation) {
-      const preparation = syncManagedModelConfig()
-        .catch((error) => {
-          this.send("agent:log", {
-            level: "stderr",
-            text: `Could not prepare managed models: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          });
-        })
-        .finally(() => {
-          // This is a single-flight guard, not a lifetime cache. The ChatGPT
-          // relay is intentionally stopped when the last macOS window closes;
-          // the next runtime must restart it and rewrite its ephemeral port.
-          if (this.runtimePreparation === preparation) {
-            this.runtimePreparation = null;
-          }
-        });
-      this.runtimePreparation = preparation;
-    }
-    return this.runtimePreparation;
-  }
-
   private async startRuntime(
     cwd: string,
     profile: PermissionProfile,
@@ -860,11 +831,8 @@ export class SessionManager {
     }
     this.grokPath = probe.path;
     this.version = probe.version;
-    await this.prepareRuntime();
-
     const env = await buildSystemProxyEnvironment(process.env, {
       GROK_DISABLE_AUTOUPDATER: "1",
-      ...managedModelEnvironment(),
     });
     const runtimeId = randomUUID();
     const child = spawn(probe.path, grokAgentStdioArgs(profile.sandbox), {

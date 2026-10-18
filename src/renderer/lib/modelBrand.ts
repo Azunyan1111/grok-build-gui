@@ -1,9 +1,7 @@
 /**
  * Maps a model to the vendor it comes from, for the picker's badges.
  *
- * Matching is on the id first and the display name second, because a relay
- * gateway names models after the upstream vendor (`deepseek-chat`) while the
- * label is free text the user can edit.
+ * Matching uses the id and display name reported by the connected agent.
  */
 
 export type BrandId =
@@ -72,7 +70,7 @@ const PATTERNS: Array<[BrandId, RegExp]> = [
   ["mistral", /mistral|mixtral|codestral/],
   ["openrouter", /openrouter/],
   ["anthropic", /claude|anthropic|sonnet|opus|haiku/],
-  ["openai", /openai|chatgpt|\bgpt\b|gpt-|codex|\bo[134]\b|davinci/],
+  ["openai", /openai|\bgpt\b|gpt-|codex|\bo[134]\b|davinci/],
 ];
 
 export function detectBrand(modelId: string, name?: string): Brand {

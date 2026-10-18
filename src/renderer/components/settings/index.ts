@@ -1,6 +1,4 @@
 export { SettingsDialog } from "./SettingsDialog";
-export { ProviderSettings } from "./ProviderSettings";
-export { ModelEndpointSettings } from "./ModelEndpointSettings";
 export type {
   SettingsDialogProps,
   SettingsSection,

@@ -1,27 +1,27 @@
 {
-  "version": "0.2.111",
-  "artifactRelativeRoot": "thirdparty/grok-build/0.2.111",
+  "version": "1.0.62",
+  "artifactRelativeRoot": "thirdparty/grok-build/1.0.62",
   "packagedResourceSubdir": "grok-build",
   "platforms": {
     "darwin-arm64": {
       "artifactPlatform": "macos-aarch64",
-      "url": "https://x.ai/cli/grok-0.2.111-macos-aarch64",
-      "sha256": "e1fafdfffe14f339460befaf194360e8f90bfd02efe8a4f24cfa1c7aea657ffe",
-      "size": 128899632,
+      "url": "https://x.ai/cli/grok-1.0.62-macos-aarch64",
+      "sha256": "ec434e831afdcfce87780f2815fd732b1df8a4a8de96a491716ad75d13605a4e",
+      "size": 175577200,
       "executable": "grok"
     },
     "win32-x64": {
       "artifactPlatform": "windows-x86_64",
-      "url": "https://x.ai/cli/grok-0.2.111-windows-x86_64.exe",
-      "sha256": "a3614df24080471709d096a2e47ce7f6c84443af1cb59b7363967858858bc9bc",
-      "size": 137980232,
+      "url": "https://x.ai/cli/grok-1.0.62-windows-x86_64.exe",
+      "sha256": "86c6c766b7961597c2a327f77e43a7b73cbc44f5cee9da6dd74ba73b45ae8b68",
+      "size": 172906128,
       "executable": "grok.exe"
     },
     "win32-arm64": {
       "artifactPlatform": "windows-aarch64",
-      "url": "https://x.ai/cli/grok-0.2.111-windows-aarch64.exe",
-      "sha256": "1fb823307ff526b68b05b1b93e906d1b997090fd109c69374a9a32b582fb6812",
-      "size": 119961928,
+      "url": "https://x.ai/cli/grok-1.0.62-windows-aarch64.exe",
+      "sha256": "b6dfb9b395ef38fe5120089ccccd10bbe92cd0a2c2547cd41c9bd469018f2b11",
+      "size": 147123344,
       "executable": "grok.exe"
     }
   },
@@ -40,23 +40,23 @@
   "notices": [
     {
       "path": "licenses/LICENSE",
-      "url": "https://raw.githubusercontent.com/xai-org/grok-build/c68e39f60462f28d9be5e683d9cbe2c57b1a5027/LICENSE",
+      "url": "https://raw.githubusercontent.com/xai-org/grok-build/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/LICENSE",
       "sha256": "116f7778b9802e569b7fa3a532b17bd80eb13c67837def01eed093d4ea472f28"
     },
     {
       "path": "licenses/THIRD-PARTY-NOTICES",
-      "url": "https://raw.githubusercontent.com/xai-org/grok-build/c68e39f60462f28d9be5e683d9cbe2c57b1a5027/THIRD-PARTY-NOTICES",
-      "sha256": "7b7c315403c596f9b7a13bb562553ee4fd4c05da8672f95bcaa02a125eea2947"
+      "url": "https://raw.githubusercontent.com/xai-org/grok-build/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/THIRD-PARTY-NOTICES",
+      "sha256": "dcbdd42b8fe45aa28f67a7b9e82d9feadec2b958c050158aeaac460eba651d07"
     },
     {
       "path": "licenses/xai-grok-tools-THIRD_PARTY_NOTICES.md",
-      "url": "https://raw.githubusercontent.com/xai-org/grok-build/c68e39f60462f28d9be5e683d9cbe2c57b1a5027/crates/codegen/xai-grok-tools/THIRD_PARTY_NOTICES.md",
+      "url": "https://raw.githubusercontent.com/xai-org/grok-build/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/THIRD_PARTY_NOTICES.md",
       "sha256": "e8785a6098a7ee780cd2db35745b8e53061cfb1b6da19147a308579466ea4e50"
     },
     {
       "path": "licenses/third-party-NOTICE",
-      "url": "https://raw.githubusercontent.com/xai-org/grok-build/c68e39f60462f28d9be5e683d9cbe2c57b1a5027/third_party/NOTICE",
-      "sha256": "4122c27e9ad4b8e67e6f8a7869d11f389600a5d5f773fdec9d0b2ac9d7f21101"
+      "url": "https://raw.githubusercontent.com/xai-org/grok-build/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/third_party/NOTICE",
+      "sha256": "73aafdd2cb8c153f041fd202d2930745372ed1154681197283a2ab5c789532d3"
     }
   ]
 }

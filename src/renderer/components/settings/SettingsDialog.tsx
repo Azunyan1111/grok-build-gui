@@ -4,15 +4,12 @@ import type { TFunction } from "i18next";
 import type { TerminalShellOption } from "../../../electron/terminalShell";
 import type { GuiSettings } from "../../lib/guiSettings";
 import { sttLanguageSettingOptions } from "../../lib/sttLanguage";
-import { ProviderSettings } from "./ProviderSettings";
-import { ModelEndpointSettings } from "./ModelEndpointSettings";
 import { UpdateSettings } from "./UpdateSettings";
 import type { AppUpdate } from "../../hooks/useAppUpdate";
 import {
   AppearanceIcon,
   CloseIcon,
   InterfaceIcon,
-  ProviderIcon,
   ShortcutIcon,
   UpdateIcon,
   VoiceIcon,
@@ -41,7 +38,6 @@ const SECTIONS = [
   { id: "appearance", labelKey: "settings.appearance", Icon: AppearanceIcon },
   { id: "voice", labelKey: "settings.voice", Icon: VoiceIcon },
   { id: "shortcuts", labelKey: "settings.shortcuts", Icon: ShortcutIcon },
-  { id: "providers", labelKey: "provider.title", Icon: ProviderIcon },
   { id: "update", labelKey: "update.title", Icon: UpdateIcon },
 ] as const satisfies readonly {
   id: string;
@@ -421,13 +417,6 @@ export function SettingsDialog({
                   {t("settings.shortcutRestoreDefaults")}
                 </button>
               </section>
-            ) : null}
-
-            {section === "providers" ? (
-              <>
-                <ProviderSettings />
-                <ModelEndpointSettings />
-              </>
             ) : null}
 
             {section === "update" ? (

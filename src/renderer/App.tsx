@@ -462,7 +462,6 @@ function WorkspaceApp({
                 onModelChange={(id, effort) =>
                   void app.handleModelChange(id, effort)
                 }
-                onConfigureModels={() => openSettings("providers")}
                 contextUsage={app.contextUsage}
                 slashCwd={app.workspaceCwd}
                 voiceSttLanguage={guiSettings.voiceSttLanguage}
@@ -553,7 +552,6 @@ function WorkspaceApp({
                 onModelChange={(id, effort) =>
                   void app.handleModelChange(id, effort)
                 }
-                onConfigureModels={() => openSettings("providers")}
                 voiceSttLanguage={guiSettings.voiceSttLanguage}
                 screenshotShortcut={guiSettings.screenshotShortcut}
                 voiceShortcut={guiSettings.voiceShortcut}
@@ -599,7 +597,6 @@ function WorkspaceApp({
               onModelChange={(id, effort) =>
                 void app.handleModelChange(id, effort)
               }
-              onConfigureModels={() => openSettings("providers")}
               voiceSttLanguage={guiSettings.voiceSttLanguage}
               screenshotShortcut={guiSettings.screenshotShortcut}
               voiceShortcut={guiSettings.voiceShortcut}

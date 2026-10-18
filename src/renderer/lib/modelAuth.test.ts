@@ -21,21 +21,9 @@ describe("selectedModelNeedsGrokLogin", () => {
     );
   });
 
-  it("does not require Grok login for user or OAuth providers", () => {
-    expect(
-      selectedModelNeedsGrokLogin(
-        state("custom-grok-proxy", "Grok through my gateway"),
-      ),
-    ).toBe(false);
-    expect(
-      selectedModelNeedsGrokLogin(
-        state("custom-deepseek-chat", "DeepSeek Chat"),
-      ),
-    ).toBe(false);
-    expect(
-      selectedModelNeedsGrokLogin(
-        state("chatgpt-gpt-5-3-codex", "GPT-5.3 Codex"),
-      ),
-    ).toBe(false);
+  it("does not require Grok login for a non-Grok model reported by the agent", () => {
+    expect(selectedModelNeedsGrokLogin(state("local-model", "Local Model"))).toBe(
+      false,
+    );
   });
 });

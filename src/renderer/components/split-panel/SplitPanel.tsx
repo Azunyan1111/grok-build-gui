@@ -68,7 +68,6 @@ type Props = {
   onRemoveQueuedSideTask?: (id: string) => void;
   onPermissionModeChange: (mode: PermissionMode) => void;
   onModelChange: (modelId: string, reasoningEffort?: string | null) => void;
-  onConfigureModels?: () => void;
   onOpenFile?: (req: OpenFileViewRequest) => void;
 };
 
@@ -104,7 +103,6 @@ export function SplitPanel({
   onRemoveQueuedSideTask,
   onPermissionModeChange,
   onModelChange,
-  onConfigureModels,
   onOpenFile,
 }: Props) {
   const { t } = useTranslation();
@@ -218,7 +216,6 @@ export function SplitPanel({
           onRemoveQueuedSideTask={onRemoveQueuedSideTask}
           onPermissionModeChange={onPermissionModeChange}
           onModelChange={onModelChange}
-          onConfigureModels={onConfigureModels}
           onOpenFile={onOpenFile}
         />
       </div>

@@ -2,45 +2,14 @@
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ModelState } from "../../../electron/preload";
 import "../../lib/i18n";
 import { ModelMenu } from "./ComposerMenus";
-
-const MODELS: ModelState = {
-  currentModelId: "grok-4",
-  currentReasoningEffort: null,
-  availableModels: [{ modelId: "grok-4", name: "Grok 4" }],
-};
 
 describe("ModelMenu", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-  });
-
-  it("closes the picker and opens custom-model settings", () => {
-    const closeMenu = vi.fn();
-    const onConfigureModels = vi.fn();
-
-    render(
-      <ModelMenu
-        menu="model"
-        toggleMenu={vi.fn()}
-        closeMenu={closeMenu}
-        disabled={false}
-        models={MODELS}
-        onModelChange={vi.fn()}
-        onConfigureModels={onConfigureModels}
-      />,
-    );
-
-    fireEvent.click(
-      screen.getByRole("menuitem", { name: "Configure custom model" }),
-    );
-
-    expect(closeMenu).toHaveBeenCalledTimes(1);
-    expect(onConfigureModels).toHaveBeenCalledTimes(1);
   });
 
   it("moves the reasoning flyout above the root menu near the viewport bottom", async () => {

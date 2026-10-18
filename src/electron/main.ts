@@ -43,21 +43,6 @@ import {
 } from "./terminalIpc.js";
 import { fetchGrokUsage, getGrokAccount } from "./grokAccount.js";
 import {
-  cancelChatGptLogin,
-  getChatGptStatus,
-  getChatGptUsage,
-  loginToChatGpt,
-  logoutFromChatGpt,
-  shutdownChatGptProvider,
-} from "./providers/chatgptProvider.js";
-import { ENDPOINT_PRESETS } from "./providers/endpointPresets.js";
-import {
-  discoverEndpointModels,
-  listEndpoints,
-  removeEndpoint,
-  saveEndpoint,
-} from "./providers/modelSync.js";
-import {
   cancelGrokLogin,
   loginToGrok,
   logoutFromGrok,
@@ -869,63 +854,6 @@ function registerIpc() {
   ipcMain.handle("grok:get-usage", async () => fetchGrokUsage());
 
   /**
-   * The agent reads its model catalog at startup, so a provider sign-in or
-   * sign-out only takes effect after reconnecting. Skipped when no workspace
-   * is connected yet — the next connect picks the change up anyway.
-   */
-  async function reconnectAgentForModelChange(): Promise<void> {
-    const cwd = sessionManager.getActiveCwd();
-    if (!cwd) return;
-    await sessionManager.connect(cwd);
-  }
-
-  ipcMain.handle("provider:chatgpt:get-status", () => getChatGptStatus());
-
-  ipcMain.handle("provider:chatgpt:login", async () => {
-    const result = await loginToChatGpt();
-    // New models only reach the picker after the agent restarts.
-    if (result.ok) await reconnectAgentForModelChange();
-    return result;
-  });
-
-  ipcMain.handle("provider:chatgpt:cancel-login", () => ({
-    ok: cancelChatGptLogin(),
-  }));
-
-  ipcMain.handle("provider:chatgpt:logout", async () => {
-    const result = await logoutFromChatGpt();
-    if (result.ok) await reconnectAgentForModelChange();
-    return result;
-  });
-
-  ipcMain.handle("provider:chatgpt:get-usage", () => getChatGptUsage());
-
-  ipcMain.handle("provider:endpoints:list", () => listEndpoints());
-
-  ipcMain.handle("provider:endpoints:presets", () => ENDPOINT_PRESETS);
-
-  ipcMain.handle(
-    "provider:endpoints:discover",
-    async (_e, options: Parameters<typeof discoverEndpointModels>[0]) =>
-      discoverEndpointModels(options),
-  );
-
-  ipcMain.handle(
-    "provider:endpoints:save",
-    async (_e, input: Parameters<typeof saveEndpoint>[0]) => {
-      const result = await saveEndpoint(input);
-      if (result.ok) await reconnectAgentForModelChange();
-      return result;
-    },
-  );
-
-  ipcMain.handle("provider:endpoints:remove", async (_e, id: string) => {
-    await removeEndpoint(id);
-    await reconnectAgentForModelChange();
-    return { ok: true };
-  });
-
-  /**
    * Open the system terminal and run the bundled interactive Grok Build TUI
    * (same pinned artifact as ACP). Optional cwd defaults to active workspace.
    */
@@ -1126,7 +1054,6 @@ function cleanupWindowWork(): Promise<void> {
 
 async function cleanupAppWork(): Promise<void> {
   await cleanupWindowWork();
-  await shutdownChatGptProvider();
 }
 
 let allowQuit = false;
@@ -1138,9 +1065,7 @@ app.on("window-all-closed", () => {
     return;
   }
   // macOS keeps the app alive after its last window closes, but the renderer
-  // tabs are gone, so their sessions must be cleaned here too. Keep the
-  // provider relay alive for app activation: its ephemeral port is part of
-  // the managed model config and remains valid for this main-process lifetime.
+  // tabs are gone, so their sessions must be cleaned here too.
   void cleanupWindowWork();
 });
 

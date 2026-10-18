@@ -4858,18 +4858,6 @@ mark.search-hit {
   text-align: right;
 }
 
-.composer-menu-item.composer-model-configure {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 5px 8px;
-}
-
-.composer-model-configure svg {
-  color: var(--text-muted);
-}
-
 .composer-model-detail {
   position: absolute;
   left: calc(100% + 8px);

@@ -237,7 +237,6 @@ export const zhCN: Record<TranslationKey, string> = {
   "composer.autoModel": "Auto",
   "composer.modelAccelerated": "夜间加速",
   "composer.modelFree": "限时免费",
-  "composer.configureCustomModel": "配置自定义模型",
   "composer.modelBalancedDescription": "能力均衡，适合日常使用",
   "composer.modelDefaultDescription": "当前工作区可用的模型",
   "composer.consumptionSpeed": "消耗速度",
@@ -490,62 +489,6 @@ export const zhCN: Record<TranslationKey, string> = {
   "office.saveBeforeSwitch": "切换工作表前请先保存或放弃更改",
   "office.showMore": "显示更多（已显示 {{shown}} / 共 {{total}} 行）",
   "office.unsupportedHint": "该旧版格式无法在应用内预览，请用外部程序打开。",
-
-  "endpoints.title": "接口端点",
-  "endpoints.description":
-    "添加厂商 API 或中转站。agent 重新连接后，其模型会出现在选择器的「自定义模型」分组里。",
-  "endpoints.empty": "还没有添加端点。",
-  "endpoints.add": "添加端点",
-  "endpoints.addHint": "支持任意 OpenAI 兼容接口。",
-  "endpoints.addTitle": "添加端点",
-  "endpoints.editTitle": "编辑端点",
-  "endpoints.provider": "提供商",
-  "endpoints.name": "名称",
-  "endpoints.namePlaceholder": "我的中转站",
-  "endpoints.baseUrl": "接口地址",
-  "endpoints.apiKey": "API Key",
-  "endpoints.getKey": "获取 Key",
-  "endpoints.keyPlaceholder": "粘贴你的 API Key",
-  "endpoints.keyStored": "已保存——留空则保持不变",
-  "endpoints.show": "显示",
-  "endpoints.hide": "隐藏",
-  "endpoints.noKey": "未设置 Key",
-  "endpoints.protocol": "协议",
-  "endpoints.models_one": "{{count}} 个模型",
-  "endpoints.models_other": "{{count}} 个模型",
-  "endpoints.reasoningEffort": "支持推理强度",
-  "endpoints.reasoningEffortHint":
-    "仅用于无法自动确认推理强度能力的模型，可手动设置。",
-  "endpoints.reasoningEffortDetected": "已根据厂商文档为所选模型自动开启。",
-  "endpoints.reasoningEffortUnavailable": "所选模型没有提供可配置的推理强度。",
-  "endpoints.reasoningEffortMixed":
-    "所选模型的推理强度能力不同；未知模型使用手动设置。",
-  "endpoints.fetchModels": "拉取模型",
-  "endpoints.fetchHint": "先拉取端点的模型列表，再勾选需要的模型。",
-  "endpoints.loading": "拉取中…",
-  "endpoints.save": "保存",
-
-  "models.groupBuiltin": "内置",
-  "models.groupOAuth": "OAuth",
-  "models.groupCustom": "自定义模型",
-
-  "provider.title": "模型厂商",
-  "provider.description":
-    "在 Grok 之外接入 ChatGPT 订阅。重新连接 agent 后，它的模型会出现在模型选择器里。",
-  "provider.signIn": "登录",
-  "provider.signInHint": "使用 ChatGPT 账号登录后即可用其订阅额度。",
-  "provider.signInFailed": "登录 ChatGPT 失败。",
-  "provider.signOutFailed": "退出 ChatGPT 登录失败。",
-  "provider.waitingForBrowser": "请在浏览器中完成登录，然后返回本应用。",
-  "provider.planWithoutCodex":
-    "{{plan}} 不包含 Codex 模型权限，登录未被保留。需要付费的 ChatGPT 套餐。",
-  "provider.sessionExpired": "登录已过期",
-  "provider.sessionExpiredHint":
-    "ChatGPT 会话无法刷新。请重新登录以继续使用其模型。",
-  "provider.plaintextWarning":
-    "本机没有可用的安全钥匙串，登录凭据以私有文件保存，未经加密。",
-  "provider.tosNotice":
-    "在 OpenAI 官方应用之外使用 ChatGPT 订阅可能违反其服务条款，账号风险由你自行承担。凭据仅保存在本机。",
 
   "update.title": "更新",
   "update.current": "当前版本",
