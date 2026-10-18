@@ -55,13 +55,6 @@ export const ENDPOINT_PRESETS: EndpointPreset[] = [
     docsUrl: "https://platform.minimaxi.com/user-center/basic-information",
   },
   {
-    id: "dashscope",
-    label: "Alibaba Qwen (DashScope)",
-    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    apiBackend: "chat_completions",
-    docsUrl: "https://bailian.console.aliyun.com/?tab=model#/api-key",
-  },
-  {
     id: "openrouter",
     label: "OpenRouter",
     baseUrl: "https://openrouter.ai/api/v1",

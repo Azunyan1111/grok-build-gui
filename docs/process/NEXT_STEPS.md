@@ -16,10 +16,10 @@ Follow [AGENT_GUIDELINES.md](AGENT_GUIDELINES.md): confirm → small step → ve
   `thirdparty/`, and bundled into the macOS Apple Silicon `.app` with license
   notices. Its self-updater is disabled under the GUI.
 - Windows x64 and ARM64 Grok Build artifacts are pinned by the same manifest.
-  `bootstrap.cmd` initializes Grok Build, Open Computer Use, Electron, and
-  native npm dependencies without changing the user's PATH.
+  `bootstrap.cmd` initializes Grok Build, Electron, and native npm dependencies
+  without changing the user's PATH.
 - `npm run package:mac` produces a signed, notarized, stapled drag-and-drop DMG
-  containing both Grok Build and Open Computer Use.
+  containing Grok Build.
 - `npm run package:mac:local` remains available for an ad-hoc signed local app.
 - **Shared sessions with CLI**: sidebar lists agent sessions via `_x.ai/session/list` (same `~/.grok/sessions` store as `grok sessions`). New chat → `session/new`; open → `session/load` (history replay via `session/update` + `_meta.isReplay`).
 

@@ -41,7 +41,6 @@ describe("detectBrand", () => {
   it("recognizes the endpoint presets shown in the add-endpoint form", () => {
     // The form badges the selected preset by its id.
     expect(detectBrand("openrouter").id).toBe("openrouter");
-    expect(detectBrand("dashscope").id).toBe("qwen");
     expect(detectBrand("zhipu").id).toBe("glm");
     expect(detectBrand("moonshot").id).toBe("kimi");
     expect(detectBrand("ollama").id).toBe("ollama");

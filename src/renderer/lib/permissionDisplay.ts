@@ -9,7 +9,6 @@ export type PermissionKindCategory =
   | "edit"
   | "delete"
   | "read"
-  | "mcp"
   | "other";
 
 export type PermissionDetail = {
@@ -90,9 +89,7 @@ function categorizeKind(
   kind: string | undefined,
   hasCommand: boolean,
   hasPath: boolean,
-  isMcp: boolean,
 ): PermissionKindCategory {
-  if (isMcp) return "mcp";
   const k = (kind ?? "").toLowerCase();
   if (k === "execute" || hasCommand) return "execute";
   if (k === "delete") return "delete";
@@ -115,8 +112,6 @@ function headingFor(
       return t("permission.heading.delete");
     case "read":
       return t("permission.heading.read");
-    case "mcp":
-      return t("permission.heading.mcp");
     default:
       return t("permission.heading.other");
   }
@@ -137,16 +132,6 @@ export function buildPermissionDisplay(
 ): PermissionDisplay {
   const raw = asRecord(input.rawInput);
   const title = str(input.title);
-
-  // Nested MCP envelope: { variant, tool_name, tool_input }
-  const variant = str(raw?.variant);
-  const isMcp =
-    variant === "UseTool" ||
-    variant === "MCPTool" ||
-    Boolean(str(raw?.tool_name) && raw?.tool_input != null);
-
-  const mcpToolName = firstString(raw, ["tool_name", "toolName", "name"]);
-  const mcpArgs = raw?.tool_input ?? raw?.arguments ?? raw?.args;
 
   const command =
     firstString(raw, ["command", "cmd"]) ?? commandFromTitle(title ?? undefined);
@@ -170,12 +155,7 @@ export function buildPermissionDisplay(
   const newString = firstString(raw, ["new_string", "newString"]);
   const content = firstString(raw, ["content"]);
 
-  const category = categorizeKind(
-    input.kind,
-    Boolean(command),
-    Boolean(filePath),
-    isMcp,
-  );
+  const category = categorizeKind(input.kind, Boolean(command), Boolean(filePath));
 
   const details: PermissionDetail[] = [];
   let purpose: string | null = description;
@@ -238,26 +218,6 @@ export function buildPermissionDisplay(
       details.push({
         label: t("permission.newContentPreview"),
         body: truncate(content, 800),
-        mono: true,
-      });
-    }
-  } else if (category === "mcp" || isMcp) {
-    const prettyName = mcpToolName
-      ? mcpToolName.replace(/__/g, " · ")
-      : title ?? t("permission.externalTool");
-    if (!purpose) {
-      purpose = t("permission.callTool", { name: prettyName });
-    }
-    details.push({
-      label: t("permission.tool"),
-      body: mcpToolName ?? prettyName,
-      mono: true,
-    });
-    if (mcpArgs != null && mcpArgs !== "") {
-      details.push({
-        label: t("permission.arguments"),
-        body:
-          typeof mcpArgs === "string" ? mcpArgs : prettyJson(mcpArgs),
         mono: true,
       });
     }

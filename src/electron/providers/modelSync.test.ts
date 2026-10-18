@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TokenSet } from "./types";
-import { DEFAULT_VISION_MODEL } from "./visionFallback";
 
 const dirs: string[] = [];
 
@@ -20,7 +19,6 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock("electron", () => ({
   app: { getPath: () => hoisted.userData },
-  // Resolved per call so a test can stub `fetch` and still be seen through it.
   net: { fetch: (...args: Parameters<typeof fetch>) => fetch(...args) },
   safeStorage: { isEncryptionAvailable: () => false },
   shell: { openExternal: async () => {} },
@@ -153,139 +151,5 @@ describe("syncManagedModelConfig", () => {
 
     expect(result).toEqual({ ok: false, error: "An endpoint URL is required." });
     expect(sync.listEndpoints()).toEqual([]);
-  });
-});
-
-describe("visionModelChain", () => {
-  it("puts a backup behind the configured OpenRouter model", async () => {
-    const { visionModelChain } = await import("./modelSync.js");
-    const chain = visionModelChain(
-      "https://openrouter.ai/api/v1",
-      "stealth/ox-alpha",
-    );
-    expect(chain[0]).toBe("stealth/ox-alpha");
-    expect(chain.length).toBeGreaterThan(1);
-  });
-
-  it("never repeats a model already chosen as the primary", async () => {
-    const { visionModelChain } = await import("./modelSync.js");
-    const chain = visionModelChain(
-      "https://openrouter.ai/api/v1",
-      "qwen/qwen3-vl-30b-a3b-instruct",
-    );
-    expect(new Set(chain).size).toBe(chain.length);
-  });
-
-  it("leaves a non-OpenRouter endpoint with only its own model", async () => {
-    const { visionModelChain } = await import("./modelSync.js");
-    expect(visionModelChain("https://api.vendor.com/v1", "vendor-vl")).toEqual([
-      "vendor-vl",
-    ]);
-  });
-});
-
-describe("describeImagesForBlindModel", () => {
-  const deepSeekEndpoint = {
-    label: "DeepSeek",
-    baseUrl: "https://api.deepseek.com/v1",
-    apiBackend: "chat_completions" as const,
-    presetId: "deepseek",
-    apiKey: "sk-deepseek",
-    models: [
-      { id: "deepseek-v4-pro", label: "V4 Pro", contextWindow: 128_000 },
-    ],
-  };
-  const images = [{ data: "aGk=", mimeType: "image/png" }];
-
-  it("leaves the images alone for a model that is not known to be blind", async () => {
-    const sync = await import("./modelSync.js");
-    await sync.saveEndpoint(relayEndpoint);
-
-    await expect(
-      sync.describeImagesForBlindModel({
-        modelKey: "custom-deepseek-chat",
-        images: [],
-        userText: "hi",
-      }),
-    ).resolves.toEqual({ status: "not-needed" });
-    await expect(
-      sync.describeImagesForBlindModel({
-        modelKey: "grok-4",
-        images,
-        userText: "hi",
-      }),
-    ).resolves.toEqual({ status: "not-needed" });
-  });
-
-  it("says what to do when a blind model has no fallback configured", async () => {
-    const sync = await import("./modelSync.js");
-    await sync.saveEndpoint(deepSeekEndpoint);
-
-    const disabled = await sync.describeImagesForBlindModel({
-      modelKey: "custom-deepseek-v4-pro",
-      images,
-      userText: "read this",
-    });
-    expect(disabled.status).toBe("unavailable");
-    expect(disabled.status === "unavailable" && disabled.reason).toContain(
-      "Settings",
-    );
-
-    sync.saveVisionFallbackSettings({ enabled: true });
-    const keyless = await sync.describeImagesForBlindModel({
-      modelKey: "custom-deepseek-v4-pro",
-      images,
-      userText: "read this",
-    });
-    expect(keyless.status).toBe("unavailable");
-    expect(keyless.status === "unavailable" && keyless.reason).toContain(
-      "API key",
-    );
-  });
-
-  it("transcribes with a saved OpenRouter key when the fallback has none", async () => {
-    const sync = await import("./modelSync.js");
-    await sync.saveEndpoint(deepSeekEndpoint);
-    await sync.saveEndpoint({
-      label: "OpenRouter",
-      baseUrl: "https://openrouter.ai/api/v1",
-      apiBackend: "chat_completions",
-      presetId: "openrouter",
-      apiKey: "sk-or-shared",
-      models: [
-        { id: "stealth/ox-alpha", label: "Ox Alpha", contextWindow: 1_048_576 },
-      ],
-    });
-    sync.saveVisionFallbackSettings({ enabled: true });
-
-    const fetchImpl = vi.fn(
-      async () =>
-        new Response(
-          JSON.stringify({ choices: [{ message: { content: "A stack trace." } }] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-    );
-    vi.stubGlobal("fetch", fetchImpl);
-    try {
-      await expect(
-        sync.describeImagesForBlindModel({
-          modelKey: "custom-deepseek-v4-pro",
-          images,
-          userText: "read this",
-        }),
-      ).resolves.toEqual({
-        status: "described",
-        text: "A stack trace.",
-        // The configured model — the first link of the chain — answered.
-        model: DEFAULT_VISION_MODEL,
-      });
-    } finally {
-      vi.unstubAllGlobals();
-    }
-
-    const init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
-    expect((init.headers as Record<string, string>).Authorization).toBe(
-      "Bearer sk-or-shared",
-    );
   });
 });

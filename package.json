@@ -17,12 +17,10 @@
   "scripts": {
     "postinstall": "npm run fix:node-pty && npm run artifacts",
     "fix:node-pty": "node scripts/fix-node-pty-helper.mjs",
-    "artifacts": "npm run artifact:grok-build && npm run artifact:computer-use",
-    "artifacts:verify": "npm run artifact:grok-build:verify && npm run artifact:computer-use:verify",
+    "artifacts": "npm run artifact:grok-build",
+    "artifacts:verify": "npm run artifact:grok-build:verify",
     "artifact:grok-build": "node scripts/install-grok-build.mjs",
     "artifact:grok-build:verify": "node scripts/install-grok-build.mjs --verify",
-    "artifact:computer-use": "node scripts/install-open-computer-use.mjs",
-    "artifact:computer-use:verify": "node scripts/install-open-computer-use.mjs --verify",
     "dev": "npm run artifacts && vite --config config/vite.config.ts",
     "dev:update-feed": "node scripts/dev-update-feed.mjs",
     "build": "npm run fix:node-pty && npm run artifacts && vite build --config config/vite.config.ts",
@@ -32,13 +30,10 @@
     "package:win": "node scripts/release-win.mjs",
     "preview": "vite preview --config config/vite.config.ts",
     "test": "vitest run --config config/vite.config.ts --root .",
-    "test:browser-integration": "node scripts/test-browser-integration.mjs",
-    "test:computer-integration": "node scripts/test-computer-integration.mjs",
     "typecheck": "tsc -p config/tsconfig.renderer.json --noEmit && tsc -p config/tsconfig.electron.json --noEmit"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^1.2.1",
-    "@e965/xlsx": "^0.20.3",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "docx-preview": "^0.4.0",
@@ -46,18 +41,12 @@
     "exceljs": "^4.4.0",
     "highlight.js": "11.11.1",
     "i18next": "^26.3.6",
-    "jszip": "^3.10.1",
-    "mammoth": "^1.11.0",
     "node-pty": "^1.1.0",
-    "pptx-preview": "^1.0.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-i18next": "^17.0.11",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
-  },
-  "optionalDependencies": {
-    "koffi": "^3.1.2"
   },
   "devDependencies": {
     "@testing-library/react": "^16.3.2",

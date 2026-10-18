@@ -48,7 +48,7 @@ For a local ad-hoc signed DMG that exercises the complete bundle layout, run:
 ./scripts/package-dmg --preview
 ```
 
-Both DMG modes restore the manifest-pinned Grok Build and Open Computer Use
-runtime dependencies and embed them in the application. Downloaded runtime
+Both DMG modes restore the manifest-pinned Grok Build runtime dependency and
+embed it in the application. Downloaded runtime
 files under `thirdparty/`, the generated `.app`, and DMG outputs are ignored and
 must not be committed.

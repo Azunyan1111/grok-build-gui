@@ -64,20 +64,14 @@ human-approval surface that ACP asks for.
   in the composer and visible at all times.
 - **Model and reasoning-intensity pickers**, populated by capability probe
   rather than hardcoded version folklore.
-- **Slash commands and skills** — `/browser`, `/computer`, `/goal`, plus whatever
-  the connected agent and its plugins expose.
+- **Slash commands and skills** — `/browser`, `/goal`, plus whatever the
+  connected agent exposes over ACP.
 - **Cancel** any in-flight turn.
 
-### Built-in browser the agent can drive
+### Built-in browser
 
-A `<webview>` pane sits beside the chat, and the app exposes it to the agent as
-an MCP tool server: `browser_open`, `browser_navigate`, `browser_snapshot`,
-`browser_click`, `browser_fill`, `browser_press_key`, `browser_scroll`,
-`browser_screenshot`, `browser_wait_for`.
-
-You watch every action happen. Filling a `type="password"` field always stops
-for explicit approval, and the secret is redacted out of the permission payload
-before it is shown or logged.
+A sandboxed `<webview>` pane sits beside the chat for user-directed browsing.
+It is not exposed to the agent as a tool server.
 
 ### Local capabilities
 
@@ -104,7 +98,6 @@ before it is shown or logged.
 
 - **Grok sign-in** via the CLI's OAuth flow, with account and usage/quota
   display.
-- **Plugin management** — list, install, enable, disable, uninstall.
 - **Interface language**: English and Simplified Chinese, or follow the system.
 - **Auto-update** from GitHub Releases or any static feed, opt-in per build.
 - **System proxy detection**, persisted window state, and a native app menu.
@@ -128,23 +121,17 @@ flowchart TB
 
     subgraph main["Electron main (src/electron/)"]
         SESS["ACP session manager"]
-        CAPS["Local capabilities<br/>terminal · files · screenshot · voice"]
-        BRIDGE["Browser bridge<br/>loopback HTTP + bearer token"]
+        CAPS["Local capabilities<br/>browser · terminal · files · screenshot · voice"]
     end
 
     subgraph pinned["Pinned runtimes (thirdparty/, integrity-checked)"]
         AGENT["grok agent stdio"]
-        MCP["browser MCP server<br/>(stdio child of the agent)"]
-        OCU["Open Computer Use"]
     end
 
     UI <-->|contextBridge IPC| SESS
     UI <-->|contextBridge IPC| CAPS
     SESS <-->|"ACP over stdio"| AGENT
-    AGENT -->|spawns| MCP
-    MCP -->|"browser_* tool calls"| BRIDGE
-    BRIDGE -->|drives| WV
-    AGENT --> OCU
+    WV <-->|contextBridge IPC| CAPS
 ```
 
 **Renderer → main.** The renderer holds no privileged handles. Everything —
@@ -155,12 +142,9 @@ agent prompts, terminal bytes, file reads, screen capture — crosses a
 speaks ACP over its stdio pipes. Session state, tool execution, and goal loops
 live in the agent; the GUI renders updates and answers permission requests.
 
-**Agent → browser.** The main process starts a loopback HTTP bridge on a random
-port with a random 32-byte bearer token, then hands the agent an MCP server
-descriptor. The agent spawns that MCP server as its own stdio child; the child
-forwards `browser_*` calls back over the authenticated loopback bridge, which
-drives the `<webview>` you are watching. The agent never touches the renderer
-directly.
+**Browser.** The embedded browser is a user-facing GUI panel. Its isolated
+`<webview>` is controlled through the preload surface and is not injected into
+agent sessions.
 
 **Two safety layers.** App permissions (ACP `request_permission` → the GUI
 modal) are the layer this app implements. The optional OS sandbox
@@ -241,16 +225,12 @@ npm run artifacts:verify
 - `thirdparty/grok-build/<version>/` contains the pinned Grok executable and
   license notices. This release executable is required by the app and is
   embedded into the packaged application.
-- `thirdparty/open-computer-use/<version>/package/` contains the pinned Open
-  Computer Use package, which is also embedded into the packaged application.
-- `thirdparty/open-computer-use/LICENSE` is tracked because it must accompany
-  redistributed Open Computer Use builds.
 
-The application only auto-detects these project-managed dependencies during
-development and the corresponding bundled resources in packaged builds. The
-downloaded Grok Build and Open Computer Use binaries are ignored and must never
-be committed; their tracked manifests in `config/runtime/` are the source of
-truth for the exact versions and integrity hashes.
+The application only auto-detects this project-managed dependency during
+development and the corresponding bundled resource in packaged builds. The
+downloaded Grok Build binary is ignored and must never be committed; its tracked
+manifest in `config/runtime/` is the source of truth for the exact version and
+integrity hashes.
 
 ## Packaging
 

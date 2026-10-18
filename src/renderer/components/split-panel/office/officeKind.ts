@@ -5,20 +5,17 @@
  * than importing it: that module pulls in the parsers, and the renderer must
  * only ever learn *which* viewer to mount, never how to parse.
  */
-export type OfficeKind = "sheet" | "doc" | "slides";
+export type OfficeKind = "sheet" | "doc";
 
 const KIND_BY_EXT: Record<string, OfficeKind> = {
   csv: "sheet",
   tsv: "sheet",
   xlsx: "sheet",
-  xls: "sheet",
-  ods: "sheet",
   docx: "doc",
-  pptx: "slides",
 };
 
 /** Pre-2007 containers we cannot parse but can still hand to the OS. */
-const LEGACY_EXT = new Set(["doc", "ppt"]);
+const LEGACY_EXT = new Set(["doc", "ppt", "pptx", "xls", "ods"]);
 
 function extensionOf(filePath: string): string {
   const name = filePath.replace(/\\/g, "/").split("/").pop() ?? "";

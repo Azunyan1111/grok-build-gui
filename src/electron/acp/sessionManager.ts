@@ -8,15 +8,11 @@ import * as acp from "@agentclientprotocol/sdk";
 import type { BrowserWindow } from "electron";
 import { HistoryMessageAccumulator } from "../../renderer/lib/sessionUpdate";
 import type { ChatMessage } from "../../renderer/types/chat";
-import { computerUseManager } from "../computerUse.js";
 import { findGrok } from "../findGrok.js";
 import {
-  describeImagesForBlindModel,
   managedModelEnvironment,
   syncManagedModelConfig,
-  type ImageFallbackOutcome,
 } from "../providers/modelSync.js";
-import { renderVisionTranscript } from "../providers/visionFallback.js";
 import {
   normalizeAgentSlashCommands,
   type SlashCommand,
@@ -256,14 +252,6 @@ export type AgentSessionSearchResult = {
   totalEstimate?: number;
 };
 
-/** Client-supplied stdio MCP (e.g. the GUI's built-in browser tools). */
-export type ClientMcpStdio = {
-  name: string;
-  command: string;
-  args: string[];
-  env: Array<{ name: string; value: string }>;
-};
-
 /** `_meta` for session/new + session/load so agent seeds yolo/auto correctly. */
 export function permissionMeta(mode: PermissionMode): {
   yoloMode: boolean;
@@ -488,35 +476,6 @@ type AgentRuntime = {
   sessionId: string | null;
 };
 
-const BUILTIN_BROWSER_MCP_TOOLS = new Set([
-  "browser_open",
-  "browser_snapshot",
-  "browser_navigate",
-  "browser_click",
-  "browser_fill",
-  "browser_press_key",
-  "browser_scroll",
-  "browser_screenshot",
-  "browser_wait_for",
-]);
-
-function isBuiltinBrowserMcpPermission(
-  params: acp.RequestPermissionRequest,
-): boolean {
-  const raw = params.toolCall?.rawInput;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
-  const record = raw as Record<string, unknown>;
-  const rawName =
-    typeof record.tool_name === "string"
-      ? record.tool_name
-      : typeof record.toolName === "string"
-        ? record.toolName
-        : "";
-  if (!rawName) return false;
-  const toolName = rawName.split(/__|[.:/]/).filter(Boolean).at(-1) ?? "";
-  return BUILTIN_BROWSER_MCP_TOOLS.has(toolName);
-}
-
 /** First "allow"-flavoured option, or null when the agent offers none. */
 function findAllowOption(
   options: acp.RequestPermissionRequest["options"],
@@ -526,66 +485,6 @@ function findAllowOption(
     return kind.includes("allow") || /^allow\b/i.test(option.name);
   });
   return match ? { optionId: String(match.optionId) } : null;
-}
-
-const COMPUTER_USE_TOOL_NAMES = new Set([
-  "list_apps",
-  "get_app_state",
-  "click",
-  "perform_secondary_action",
-  "scroll",
-  "drag",
-  "type_text",
-  "press_key",
-  "set_value",
-]);
-
-/** Match an MCP envelope without confusing generic click/scroll tool names. */
-function isComputerUseToolCall(...values: unknown[]): boolean {
-  const strings: string[] = [];
-  const visit = (value: unknown, depth: number) => {
-    if (depth > 4 || value == null) return;
-    if (typeof value === "string") {
-      strings.push(value.toLowerCase());
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) visit(item, depth + 1);
-      return;
-    }
-    if (typeof value === "object") {
-      for (const [key, item] of Object.entries(
-        value as Record<string, unknown>,
-      )) {
-        if (
-          /^(?:tool_?name|server_?name|name|title|kind|variant)$/i.test(key)
-        ) {
-          visit(item, depth + 1);
-        }
-      }
-    }
-  };
-  for (const value of values) visit(value, 0);
-
-  // ACP implementations sometimes expose only the tool title, without the
-  // MCP server name. These names are distinctive to Open Computer Use.
-  if (
-    strings.some((value) =>
-      ["list_apps", "get_app_state", "perform_secondary_action"].some(
-        (toolName) => value.includes(toolName),
-      ),
-    )
-  ) {
-    return true;
-  }
-
-  const hasServer = strings.some((value) =>
-    /(?:open[ _-]?)?computer[ _-]?use/.test(value),
-  );
-  if (!hasServer) return false;
-  return strings.some((value) =>
-    [...COMPUTER_USE_TOOL_NAMES].some((toolName) => value.includes(toolName)),
-  );
 }
 
 type ListResponse = {
@@ -665,11 +564,6 @@ export class SessionManager {
   private sandboxProfile: GrokSandboxProfile =
     this.permissionProfiles.getDefault().sandbox;
   /**
-   * MCP servers the GUI injects on session/new + session/load
-   * (the built-in browser MCP is available for every GUI session).
-   */
-  private clientMcpServers: ClientMcpStdio[] = [];
-  /**
    * In-flight session/load work, keyed by session id.
    * Multiple sessions may load in parallel when the user switches quickly;
    * each keeps its own accumulator so a superseding click does not wipe data.
@@ -703,52 +597,6 @@ export class SessionManager {
    * tabs shows the right gauge immediately.
    */
   private contextUsage = new Map<string, ContextUsage>();
-  /** Sessions that used Open Computer Use since its last turn-ended signal. */
-  private computerUseSessionIds = new Set<string>();
-  /** Serialize global OCU cleanup so concurrent session turns cannot race it. */
-  private computerUseCleanup: Promise<void> = Promise.resolve();
-
-  private markComputerUse(sessionId: string | null | undefined) {
-    if (sessionId) this.computerUseSessionIds.add(sessionId);
-  }
-
-  private endComputerUseTurn(
-    sessionId: string | null | undefined,
-    reason: string,
-    force = false,
-  ): Promise<void> {
-    const run = async () => {
-      if (sessionId && !this.computerUseSessionIds.has(sessionId) && !force) {
-        return;
-      }
-      if (this.computerUseSessionIds.size === 0) return;
-
-      // Open Computer Use 0.2.x exposes one process-wide turn-ended signal.
-      // Do not send it while another associated GUI session is still acting.
-      if (
-        !force &&
-        [...this.computerUseSessionIds].some(
-          (id) => id !== sessionId && this.isTurnRunning(id),
-        )
-      ) {
-        return;
-      }
-
-      const affectedSessionIds = [...this.computerUseSessionIds];
-      await computerUseManager.endTurn({
-        reason,
-        session_id: sessionId ?? undefined,
-        affected_session_ids: affectedSessionIds,
-      });
-      for (const id of affectedSessionIds) {
-        this.computerUseSessionIds.delete(id);
-      }
-    };
-    const result = this.computerUseCleanup.then(run, run);
-    this.computerUseCleanup = result.catch(() => undefined);
-    return result;
-  }
-
   private rememberSideTaskSession(sessionId: string) {
     if (!sessionId) return;
     this.sideTaskSessionIds.add(sessionId);
@@ -880,15 +728,6 @@ export class SessionManager {
     this.win = win;
   }
 
-  /** Replace client-injected MCP list (applied on next session/new or session/load). */
-  setClientMcpServers(servers: ClientMcpStdio[]) {
-    this.clientMcpServers = Array.isArray(servers) ? servers : [];
-  }
-
-  getClientMcpServers(): ClientMcpStdio[] {
-    return this.clientMcpServers;
-  }
-
   getActiveSessionId(): string | null {
     return this.activeSessionId;
   }
@@ -899,10 +738,6 @@ export class SessionManager {
 
   getState(): ConnectionState {
     return this.state;
-  }
-
-  private acpMcpServers(): ClientMcpStdio[] {
-    return this.clientMcpServers;
   }
 
   /**
@@ -1269,16 +1104,6 @@ export class SessionManager {
         normalizeAgentSlashCommands(n.update.availableCommands),
       );
     }
-    if (
-      n._meta?.isReplay !== true &&
-      isComputerUseToolCall(
-        n.update?.rawInput,
-        n.update,
-      )
-    ) {
-      this.markComputerUse(n.sessionId);
-    }
-
     // Buffer replay updates into the matching in-flight load. Orphaned replays
     // (from a superseded / background load) must not hit the live path.
     if (n._meta?.isReplay === true && n.sessionId) {
@@ -1454,32 +1279,11 @@ export class SessionManager {
       ? (this.permissionProfiles.getSession(sessionId) ?? runtimeProfile)
       : runtimeProfile;
     const mode = profile?.approval ?? this.permissionMode;
-    if (
-      isComputerUseToolCall(
-        params.toolCall?.rawInput,
-        params.toolCall?.title,
-        params.toolCall?.kind,
-      )
-    ) {
-      this.markComputerUse(params.sessionId ? String(params.sessionId) : null);
-    }
     // Full access is enforced client-side too: the agent is told via
     // `x.ai/yolo_mode_changed`, but that notify is fire-and-forget and sessions
     // created before the switch never saw `_meta.yoloMode`. Without this the
     // modal still opens in "Full access", which is what users report.
-    // Mirrors the early return in requestLocalToolPermission().
     if (mode === "always-approve") {
-      const allow = findAllowOption(params.options);
-      if (allow) {
-        return Promise.resolve({
-          outcome: { outcome: "selected", optionId: allow.optionId },
-        });
-      }
-    }
-    if (
-      mode === "auto" &&
-      isBuiltinBrowserMcpPermission(params)
-    ) {
       const allow = findAllowOption(params.options);
       if (allow) {
         return Promise.resolve({
@@ -1535,33 +1339,6 @@ export class SessionManager {
       });
     }
     return { ok: true };
-  }
-
-  /** Route a GUI-owned tool's sensitive action through the existing modal. */
-  async requestLocalToolPermission(input: {
-    title: string;
-    kind: string;
-    rawInput: unknown;
-  }): Promise<boolean> {
-    const profile = this.activeSessionId
-      ? this.permissionProfiles.getSession(this.activeSessionId)
-      : this.permissionProfiles.getDefault();
-    if (profile?.approval === "always-approve") return true;
-    const response = await this.handlePermission({
-      sessionId: this.activeSessionId ?? undefined,
-      toolCall: {
-        toolCallId: `gui-browser-${Date.now()}`,
-        title: input.title,
-        kind: input.kind,
-        rawInput: input.rawInput,
-      },
-      options: [
-        { optionId: "allow_once", name: "Allow once", kind: "allow_once" },
-        { optionId: "deny_once", name: "Deny", kind: "reject_once" },
-      ],
-    } as unknown as acp.RequestPermissionRequest, profile ?? undefined);
-    const outcome = response.outcome;
-    return outcome.outcome === "selected" && outcome.optionId === "allow_once";
   }
 
   /**
@@ -1932,16 +1709,6 @@ export class SessionManager {
 
     const agentErrors: string[] = [];
 
-    // Notify before agent-side deletion closes the MCP stdio process; the
-    // native helper needs the live process to release its turn state cleanly.
-    try {
-      await this.endComputerUseTurn(sessionId, "session-deleted");
-    } catch (e) {
-      agentErrors.push(
-        `computer-use cleanup: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-
     // 1) TUI path — real delete + live-session teardown, when ACP is live.
     if (sessionConnection) {
       for (const method of XAI_SESSION_DELETE_METHODS) {
@@ -2160,7 +1927,6 @@ export class SessionManager {
         acp.methods.agent.session.new,
         {
           cwd: targetCwd,
-          mcpServers: this.acpMcpServers(),
           // Agent reads `yoloMode` + `autoMode` booleans (not only permission_mode).
           // `sessionId` is honoured for new sessions, which is what lets the
           // worktree registry row point at the chat we are about to open.
@@ -2341,7 +2107,6 @@ export class SessionManager {
         {
           sessionId,
           cwd,
-          mcpServers: this.acpMcpServers(),
           // Re-seed yolo/auto for this session on reconnect (CLI-compatible).
           _meta: permissionMeta(profile.approval),
         },
@@ -2469,41 +2234,6 @@ export class SessionManager {
     }
   }
 
-  /**
-   * Have a vision model read attachments the active model cannot decode.
-   * Throws when the model is blind and no fallback can stand in: a turn that
-   * silently drops the user's screenshot is worse than a clear refusal.
-   */
-  private async transcribeImagesForModel(
-    images: Array<{ data: string; mimeType: string }>,
-    userText: string,
-  ): Promise<ImageFallbackOutcome> {
-    const startedAt = Date.now();
-    const outcome = await describeImagesForBlindModel({
-      modelKey: this.modelId,
-      images,
-      userText,
-    });
-    if (outcome.status === "unavailable") {
-      const label =
-        this.availableModels.find((m) => m.modelId === this.modelId)?.name ??
-        this.modelId ??
-        "The selected model";
-      throw new Error(`${label} cannot read images. ${outcome.reason}`);
-    }
-    if (outcome.status === "described") {
-      // The elapsed time matters here: a transcription is a second network
-      // round-trip, and a slow vision provider is the usual reason a turn
-      // seems to stall before the model has even been asked anything.
-      const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-      this.send("agent:log", {
-        level: "info",
-        text: `${outcome.model} read ${images.length} image(s) for ${this.modelId} in ${seconds}s`,
-      });
-    }
-    return outcome;
-  }
-
   async prompt(
     text: string,
     images?: Array<{ data: string; mimeType: string }>,
@@ -2581,15 +2311,7 @@ export class SessionManager {
     this.send("agent:turn", { status: "started", sessionId: targetSessionId });
 
     let result: { ok: boolean; error?: string } = { ok: true };
-    // A text-only model (DeepSeek V4 Flash/Pro, …) rejects image blocks, so a
-    // vision model transcribes them and the text travels in their place.
-    let vision: ImageFallbackOutcome = { status: "not-needed" };
     try {
-      if (!abort.signal.aborted) {
-        vision = await this.transcribeImagesForModel(imgs, trimmed);
-      }
-      // Transcription is a network round-trip of its own, so re-check: the user
-      // may have cancelled while it ran.
       if (!abort.signal.aborted) {
         // ACP content blocks: images + files, then text.
         const fileBlocks: Array<Record<string, unknown>> = fileParts.map(
@@ -2634,29 +2356,16 @@ export class SessionManager {
                 : "See attachments."
             : "");
 
-        const transcript =
-          vision.status === "described"
-            ? renderVisionTranscript({
-                text: vision.text,
-                model: vision.model,
-                imageCount: imgs.length,
-              })
-            : null;
-
-        // A transcribed image is dropped rather than sent: the model cannot
-        // decode it, and the transcript is the only view of it that it gets.
         const promptBlocks: Array<Record<string, unknown>> = [
-          ...(transcript
-            ? []
-            : imgs.map((img) => ({
-                type: "image",
-                data: img.data,
-                mimeType: img.mimeType,
-              }))),
+          ...imgs.map((img) => ({
+            type: "image",
+            data: img.data,
+            mimeType: img.mimeType,
+          })),
           ...fileBlocks,
           {
             type: "text",
-            text: transcript ? `${fallbackText}\n\n${transcript}` : fallbackText,
+            text: fallbackText,
           },
         ];
 
@@ -2712,7 +2421,6 @@ export class SessionManager {
       }
       // A turn that errored or was cancelled never reaches emitTurnArtifacts.
       this.turnScans.delete(targetSessionId);
-      await this.endComputerUseTurn(targetSessionId, "turn-ended");
     }
 
     // Refresh titles/order after the turn is fully off `runningTurns` so
@@ -2770,7 +2478,6 @@ export class SessionManager {
       sessionId: id,
       stopReason: "cancelled",
     });
-    void this.endComputerUseTurn(id, "turn-cancelled");
     return { ok: true };
   }
 
@@ -2976,9 +2683,6 @@ export class SessionManager {
   }
 
   private cleanupProcessOnly() {
-    if (this.computerUseSessionIds.size > 0) {
-      void this.endComputerUseTurn(null, "agent-process-exited", true);
-    }
     // Clear sticky sidebars: every in-flight turn ends when the agent process dies.
     for (const sessionId of this.runningTurns.keys()) {
       this.send("agent:turn", {
@@ -3005,7 +2709,6 @@ export class SessionManager {
   }
 
   private async disconnectInternal(): Promise<void> {
-    await this.endComputerUseTurn(null, "agent-disconnected", true);
     for (const runtimeId of [...this.runtimes.keys()]) {
       await this.closeRuntime(runtimeId);
     }

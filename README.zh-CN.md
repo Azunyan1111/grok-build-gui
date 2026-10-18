@@ -58,19 +58,12 @@ Grok Build 本身是一个终端 agent。本应用在它前面放了一套真正
   逐次允许或拒绝。
 - **权限模式**从逐项审批到完全放行（YOLO），在输入框处选择并始终可见。
 - **模型与推理强度选择器**，由能力探测填充，而不是硬编码的版本经验。
-- **斜杠命令与技能**——`/browser`、`/computer`、`/goal`，以及所连接 agent 及其
-  插件提供的其他命令。
+- **斜杠命令与技能**——`/browser`、`/goal`，以及所连接 agent 通过 ACP 提供的其他命令。
 - 可随时**取消**进行中的对话轮次。
 
-### 可供 agent 操作的内嵌浏览器
+### 内嵌浏览器
 
-聊天区旁边是一个 `<webview>` 面板，应用把它作为 MCP 工具服务暴露给 agent：
-`browser_open`、`browser_navigate`、`browser_snapshot`、`browser_click`、
-`browser_fill`、`browser_press_key`、`browser_scroll`、`browser_screenshot`、
-`browser_wait_for`。
-
-每一步操作你都能亲眼看到。填写 `type="password"` 字段时一律停下来请求显式批准，
-且密文在展示或记录之前就已从权限载荷中抹除。
+聊天区旁边是一个沙箱化的 `<webview>` 面板，供用户手动浏览。它不会作为工具服务暴露给 agent。
 
 ### 本地能力
 
@@ -91,7 +84,6 @@ Grok Build 本身是一个终端 agent。本应用在它前面放了一套真正
 ### 账号与平台
 
 - 通过 CLI 的 OAuth 流程**登录 Grok**，并显示账号与用量/配额。
-- **插件管理**——列出、安装、启用、停用、卸载。
 - **界面语言**：英文、简体中文，或跟随系统。
 - **自动更新**，来源可以是 GitHub Releases 或任意静态更新源，按构建选择启用。
 - **系统代理探测**、窗口状态持久化，以及原生应用菜单。
@@ -114,23 +106,17 @@ flowchart TB
 
     subgraph main["Electron 主进程 (src/electron/)"]
         SESS["ACP 会话管理器"]
-        CAPS["本地能力<br/>终端 · 文件 · 截屏 · 语音"]
-        BRIDGE["浏览器 bridge<br/>环回 HTTP + bearer token"]
+        CAPS["本地能力<br/>浏览器 · 终端 · 文件 · 截屏 · 语音"]
     end
 
     subgraph pinned["固定版本运行时 (thirdparty/，经完整性校验)"]
         AGENT["grok agent stdio"]
-        MCP["浏览器 MCP 服务<br/>(agent 的 stdio 子进程)"]
-        OCU["Open Computer Use"]
     end
 
     UI <-->|contextBridge IPC| SESS
     UI <-->|contextBridge IPC| CAPS
     SESS <-->|"ACP over stdio"| AGENT
-    AGENT -->|启动| MCP
-    MCP -->|"browser_* 工具调用"| BRIDGE
-    BRIDGE -->|驱动| WV
-    AGENT --> OCU
+    WV <-->|contextBridge IPC| CAPS
 ```
 
 **渲染进程 → 主进程。** 渲染进程不持有任何特权句柄。所有操作——agent 提示、终
@@ -140,10 +126,8 @@ flowchart TB
 管道讲 ACP。会话状态、工具执行和目标循环都在 agent 里；GUI 负责渲染更新和回应
 权限请求。
 
-**Agent → 浏览器。** 主进程在随机端口上启动一个环回 HTTP bridge，配一个随机的
-32 字节 bearer token，然后把一份 MCP 服务描述交给 agent。agent 将该 MCP 服务作
-为自己的 stdio 子进程启动；该子进程再把 `browser_*` 调用经由带鉴权的环回 bridge
-转发回来，最终驱动你正在观看的 `<webview>`。agent 从不直接接触渲染进程。
+**浏览器。** 内嵌浏览器是面向用户的 GUI 面板。隔离的 `<webview>` 通过 preload
+接口控制，不会注入到 agent 会话中。
 
 **两层安全。** 应用权限（ACP `request_permission` → GUI 弹窗）是本应用负责实现
 的那一层。可选的操作系统沙箱（Seatbelt/Landlock）由 agent 强制执行，违规时直接
@@ -221,14 +205,10 @@ npm run artifacts:verify
 
 - `thirdparty/grok-build/<version>/` 包含固定版本的 Grok 可执行文件和许可证声
   明。该发布版可执行文件是应用运行所必需的，并会被嵌入打包后的应用。
-- `thirdparty/open-computer-use/<version>/package/` 包含固定版本的 Open Computer
-  Use 包，同样会嵌入打包后的应用。
-- `thirdparty/open-computer-use/LICENSE` 被纳入版本控制，因为它必须随 Open
-  Computer Use 的再分发一同提供。
 
-应用只会在开发期间自动探测这些由项目管理的依赖，在打包构建中则使用对应的内置资
-源。下载得到的 Grok Build 和 Open Computer Use 二进制文件被忽略且绝不可提交；
-`config/runtime/` 中被跟踪的清单才是确切版本与完整性哈希的事实来源。
+应用只会在开发期间自动探测这个由项目管理的依赖，在打包构建中则使用对应的内置资
+源。下载得到的 Grok Build 二进制文件被忽略且绝不可提交；`config/runtime/`
+中被跟踪的清单才是确切版本与完整性哈希的事实来源。
 
 ## 打包
 
@@ -287,5 +267,4 @@ preview 命令生成用于本地验证的 ad-hoc 签名 DMG。默认命令生成
 ## 许可证
 
 GUI 部分采用 MIT 许可证，见 [LICENSE](LICENSE)。内置的 Grok Build 构件为
-Apache-2.0，并随附其上游及第三方声明。Open Computer Use 0.2.1 为 MIT 许可证，
-在打包分发中保留其许可证文件。
+Apache-2.0，并随附其上游及第三方声明。

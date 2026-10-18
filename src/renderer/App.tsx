@@ -19,7 +19,6 @@ import {
   saveSidebarCollapsed,
 } from "./components/layout/sidebarWidth";
 import { PermissionModal } from "./components/PermissionModal";
-import { PluginsPanel } from "./components/plugins";
 import { SettingsDialog, type SettingsSection } from "./components/settings";
 import {
   SplitPanel,
@@ -41,8 +40,6 @@ import {
 import { detectHostPlatform } from "./lib/platform";
 import { resolveUiLanguage } from "./lib/uiLanguage";
 
-/** Settings is a modal, not a view — it must not tear down chat / terminals. */
-type MainView = "chat" | "plugins";
 type PendingGuestSend = () => void | Promise<void>;
 
 export function App() {
@@ -132,12 +129,9 @@ function WorkspaceApp({
   const { t } = useTranslation();
   const app = useGrokApp();
   const update = useAppUpdate();
-  const [mainView, setMainView] = useState<MainView>("chat");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] =
     useState<SettingsSection>("interface");
-  /** Bump after plugin changes so composer reloads slash skills. */
-  const [slashRefreshKey, setSlashRefreshKey] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(loadSidebarCollapsed);
   /** After search modal pick: scroll + highlight this message. */
@@ -198,17 +192,12 @@ function WorkspaceApp({
   /** Keep dock mounted after first open so tabs/sessions survive collapse. */
   const [bottomMounted, setBottomMounted] = useState(false);
 
-  function goChat() {
-    setMainView("chat");
-  }
-
   /**
    * Every chat owns its own right-panel tabs, so leaving one swaps the panel
    * over to the target's. Told here rather than watched inside the panel, so a
    * provisional id turning real is never mistaken for a switch.
    */
   function leaveSession(target: string | null) {
-    goChat();
     enterSession(target);
   }
 
@@ -291,22 +280,6 @@ function WorkspaceApp({
     });
   }, [app.browserFocus]);
 
-  // Browser MCP: create/focus the same visible right-side browser the agent controls.
-  useEffect(() => {
-    if (!window.grok?.onBrowserOpenRequest) return;
-    return window.grok.onBrowserOpenRequest((request) => {
-      setMainView("chat");
-      setRightMounted(true);
-      setRightOpen(true);
-      setRightFocus({
-        tool: "browser",
-        nonce: request.nonce,
-        startUrl: request.startUrl,
-        placement: "right",
-      });
-    });
-  }, []);
-
   /** Chat file chip / tool path → right split fileview (diff or content). */
   function handleOpenFile(req: OpenFileViewRequest) {
     setRightMounted(true);
@@ -325,10 +298,6 @@ function WorkspaceApp({
     });
   }
 
-  const pluginsActive = mainView === "plugins";
-  /** Full-page main views replace chat + hide split docks (Codex-style). */
-  // Settings is a separate modal child window, so it never locks this chrome.
-  const chromeLocked = pluginsActive;
   /** Windows-only custom title bar; macOS keeps traffic lights + brand chrome. */
   const winCustomChrome = detectHostPlatform() === "win32";
 
@@ -349,7 +318,7 @@ function WorkspaceApp({
             sessions={app.sessions}
             sideTasks={app.sideTasks}
             taskWorkspaceRoot={app.taskWorkspaceRoot}
-            activeId={chromeLocked ? null : app.activeId}
+            activeId={app.activeId}
             state={app.state}
             loadingHistory={app.loadingHistory}
             onNew={handleNew}
@@ -360,8 +329,6 @@ function WorkspaceApp({
               void app.handleDeleteProject(cwd, name)
             }
             onRetryConnect={() => void app.connect()}
-            pluginsActive={pluginsActive}
-            onOpenPlugins={() => setMainView("plugins")}
             onOpenSettings={() => openSettings()}
             grokAccount={account}
             onLogin={onLogin}
@@ -383,10 +350,10 @@ function WorkspaceApp({
       ) : null}
 
       <MainPanel
-        sessionTitle={pluginsActive ? t("main.plugins") : app.sessionTitle}
-        worktree={pluginsActive ? null : app.active?.worktree}
-        loadingHistory={chromeLocked ? false : app.loadingHistory}
-        connectionFault={chromeLocked ? null : app.connectionFault}
+        sessionTitle={app.sessionTitle}
+        worktree={app.active?.worktree}
+        loadingHistory={app.loadingHistory}
+        connectionFault={app.connectionFault}
         sidebarCollapsed={sidebarCollapsed}
         onExpandSidebar={
           /* Windows expand is on the custom title bar. */
@@ -394,233 +361,168 @@ function WorkspaceApp({
             ? () => setSidebarCollapsedPersist(false)
             : undefined
         }
-        bottomTerminalOpen={chromeLocked ? false : bottomOpen}
-        onToggleBottomTerminal={
-          chromeLocked ? undefined : toggleBottomTerminal
-        }
-        rightPanelOpen={chromeLocked ? false : rightOpen}
-        onToggleRightPanel={chromeLocked ? undefined : toggleRightPanel}
-        rightMaximizeVisible={
-          !chromeLocked && rightOpen && rightHasContent
-        }
-        rightMaximized={!chromeLocked && rightMaximized}
-        onToggleRightMaximize={
-          chromeLocked ? undefined : toggleRightMaximize
-        }
-        messageDisplayMode={
-          chromeLocked ? undefined : guiSettings.messageDisplayMode
-        }
-        onMessageDisplayModeChange={
-          chromeLocked
-            ? undefined
-            : (mode) =>
-                onGuiSettingsChange({
-                  ...guiSettings,
-                  messageDisplayMode: mode,
-                })
+        bottomTerminalOpen={bottomOpen}
+        onToggleBottomTerminal={toggleBottomTerminal}
+        rightPanelOpen={rightOpen}
+        onToggleRightPanel={toggleRightPanel}
+        rightMaximizeVisible={rightOpen && rightHasContent}
+        rightMaximized={rightMaximized}
+        onToggleRightMaximize={toggleRightMaximize}
+        messageDisplayMode={guiSettings.messageDisplayMode}
+        onMessageDisplayModeChange={(mode) =>
+          onGuiSettingsChange({
+            ...guiSettings,
+            messageDisplayMode: mode,
+          })
         }
       >
-        {pluginsActive ? (
-          <PluginsPanel
-            onBack={goChat}
-            onPluginsChanged={() => setSlashRefreshKey((n) => n + 1)}
-          />
-        ) : (
+        <div
+          className={
+            bottomOpen ? "main-body main-body-with-bottom" : "main-body"
+          }
+        >
+          {/* Left/right split only on the upper pane; bottom spans full width. */}
           <div
             className={
-              bottomOpen ? "main-body main-body-with-bottom" : "main-body"
+              rightOpen
+                ? rightMaximized
+                  ? "main-body-upper main-body-split main-body-right-max"
+                  : "main-body-upper main-body-split"
+                : "main-body-upper"
             }
           >
-            {/* Left/right split only on the upper pane; bottom spans full width. */}
             <div
               className={
-                rightOpen
-                  ? rightMaximized
-                    ? "main-body-upper main-body-split main-body-right-max"
-                    : "main-body-upper main-body-split"
-                  : "main-body-upper"
+                rightMaximized
+                  ? "main-chat-col main-chat-col-hidden"
+                  : "main-chat-col"
               }
+              aria-hidden={rightMaximized ? true : undefined}
             >
-              <div
-                className={
-                  rightMaximized
-                    ? "main-chat-col main-chat-col-hidden"
-                    : "main-chat-col"
+              <ChatView
+                messages={app.active?.messages ?? []}
+                loading={app.loadingHistory}
+                onOpenFile={handleOpenFile}
+                workspaceRoot={app.workspaceCwd}
+                searchFocus={chatSearchFocus}
+                onRewindToMessage={app.handleRewindToMessage}
+                messageDisplayMode={guiSettings.messageDisplayMode}
+                onExitMarkdownView={() =>
+                  onGuiSettingsChange({
+                    ...guiSettings,
+                    messageDisplayMode: "rendered",
+                  })
                 }
-                aria-hidden={rightMaximized ? true : undefined}
-              >
-                <ChatView
-                  messages={app.active?.messages ?? []}
-                  loading={app.loadingHistory}
-                  onOpenFile={handleOpenFile}
-                  workspaceRoot={app.workspaceCwd}
-                  searchFocus={chatSearchFocus}
-                  onRewindToMessage={app.handleRewindToMessage}
-                  messageDisplayMode={guiSettings.messageDisplayMode}
-                  onExitMarkdownView={() =>
-                    onGuiSettingsChange({
-                      ...guiSettings,
-                      messageDisplayMode: "rendered",
-                    })
-                  }
-                  emptyHint={
-                    app.loadingHistory
-                      ? t("main.loadingHistory")
-                      : app.connectionFault
-                        ? app.connectionFault
-                        : !app.activeId
-                          ? app.taskMode
-                            ? t("main.startTask")
-                            : t("main.chooseWorkspace")
-                          : app.sessions.length > 0
-                            ? t("main.selectSession")
-                            : t("main.startChat")
-                  }
-                />
+                emptyHint={
+                  app.loadingHistory
+                    ? t("main.loadingHistory")
+                    : app.connectionFault
+                      ? app.connectionFault
+                      : !app.activeId
+                        ? app.taskMode
+                          ? t("main.startTask")
+                          : t("main.chooseWorkspace")
+                        : app.sessions.length > 0
+                          ? t("main.selectSession")
+                          : t("main.startChat")
+                }
+              />
 
-                <Composer
-                  value={app.input}
-                  onChange={app.setInput}
-                  onSubmit={(text) =>
-                    sendWithGuestReminder(() => app.handleSubmit(text))
-                  }
-                  onCancel={app.handleCancel}
-                  disabled={
-                    app.state.status === "connecting" ||
-                    app.loadingHistory ||
-                    app.state.status === "error" ||
-                    app.state.status === "disconnected"
-                  }
-                  busy={app.busy}
-                  promptQueue={app.promptQueue}
-                  onSendNowQueued={(id) => void app.handleSendNow(id)}
-                  onRemoveQueued={app.handleRemoveQueued}
-                  pendingImages={app.pendingImages}
-                  pendingFiles={app.pendingFiles}
-                  onRemoveImage={app.removePendingImage}
-                  onRemoveFile={app.removePendingFile}
-                  onAddFiles={(files) => void app.handleAddFiles(files)}
-                  onCaptureScreenshot={(mode, options) =>
-                    void app.handleCaptureScreenshot(mode, options)
-                  }
-                  screenshotError={app.screenshotError}
-                  permissionMode={app.permissionMode}
-                  onPermissionModeChange={(mode) =>
-                    void app.handlePermissionModeChange(mode)
-                  }
-                  models={app.models}
-                  onModelChange={(id, effort) =>
-                    void app.handleModelChange(id, effort)
-                  }
-                  onConfigureModels={() => openSettings("providers")}
-                  contextUsage={app.contextUsage}
-                  slashCwd={app.workspaceCwd}
-                  slashRefreshKey={slashRefreshKey}
-                  voiceSttLanguage={guiSettings.voiceSttLanguage}
-                  screenshotShortcut={guiSettings.screenshotShortcut}
-                  voiceShortcut={guiSettings.voiceShortcut}
-                  primaryShortcutTarget
-                  workspace={
-                    !app.activeId
-                      ? {
-                          // Hide ephemeral task paths from the chip (never show
-                          // Documents/GrokBuildGUI/<timestamp> on draft).
-                          cwd: app.taskMode ? "" : app.workspaceCwd,
-                          canChange: app.canChangeWorkspace,
-                          recents: app.recentProjects,
-                          onSelectRecent: (dir) => app.selectProjectCwd(dir),
-                          onForgetRecent: (dir) => app.dropRecentProject(dir),
-                          isTaskMode: app.taskMode,
-                          onPick: () => void app.pickCwd(),
-                          onClear: () => app.clearWorkspace(),
-                        }
-                      : undefined
-                  }
-                  worktree={
-                    !app.activeId && app.canChangeWorkspace && !!app.projectCwd
-                      ? {
-                          isRepo: app.workspaceGit.isRepo,
-                          branch: app.workspaceGit.branch,
-                          cwd: app.projectCwd,
-                          baseRef: app.worktreeBaseRef,
-                          enabled: app.worktreeEnabled,
-                          onToggle: app.toggleWorktree,
-                          onSelectBranch: app.selectWorktreeBranch,
-                        }
-                      : undefined
-                  }
-                  worktreeProgress={app.worktreeProgress}
-                />
-              </div>
-
-              {rightMounted || rightOpen ? (
-                <SplitPanel
-                  placement="right"
-                  open={rightOpen && !chromeLocked}
-                  onCollapse={() => {
-                    setRightOpen(false);
-                    setRightMaximized(false);
-                  }}
-                  entry="home"
-                  focusTool={rightFocus}
-                  sessionKey={panelSessionKey}
-                  onRestore={() => {
-                    setRightMounted(true);
-                    setRightOpen(true);
-                  }}
-                  workspaceRoot={app.workspaceCwd}
-                  maximized={rightMaximized && rightOpen && !chromeLocked}
-                  onHasContentChange={(has) => {
-                    setRightHasContent(has);
-                    if (!has) setRightMaximized(false);
-                  }}
-                  onCreateSideTask={() => app.createSideTaskSession()}
-                  sideTaskEnabled={!!app.activeId}
-                  onCloseSideTask={(sessionId) =>
-                    void app.closeSideTaskSession(sessionId)
-                  }
-                  sideTaskSessions={app.sideTasks}
-                  sideTaskDisabled={
-                    app.state.status === "connecting" ||
-                    app.state.status === "error" ||
-                    app.state.status === "disconnected"
-                  }
-                  onSubmitSideTask={(sessionId, text, images, files) =>
-                    sendWithGuestReminder(() =>
-                      app.submitSideTaskPrompt(sessionId, text, images, files),
-                    )
-                  }
-                  onCancelSideTask={(sessionId) =>
-                    void app.cancelSession(sessionId)
-                  }
-                  sideTaskPromptQueue={app.sideTaskPromptQueue}
-                  onSendNowSideTask={app.handleSendNow}
-                  onRemoveQueuedSideTask={app.handleRemoveQueued}
-                  models={app.models}
-                  permissionMode={app.permissionMode}
-                  onPermissionModeChange={(mode) =>
-                    void app.handlePermissionModeChange(mode)
-                  }
-                  onModelChange={(id, effort) =>
-                    void app.handleModelChange(id, effort)
-                  }
-                  onConfigureModels={() => openSettings("providers")}
-                  slashRefreshKey={slashRefreshKey}
-                  voiceSttLanguage={guiSettings.voiceSttLanguage}
-                  screenshotShortcut={guiSettings.screenshotShortcut}
-                  voiceShortcut={guiSettings.voiceShortcut}
-                  onOpenFile={handleOpenFile}
-                />
-              ) : null}
+              <Composer
+                value={app.input}
+                onChange={app.setInput}
+                onSubmit={(text) =>
+                  sendWithGuestReminder(() => app.handleSubmit(text))
+                }
+                onCancel={app.handleCancel}
+                disabled={
+                  app.state.status === "connecting" ||
+                  app.loadingHistory ||
+                  app.state.status === "error" ||
+                  app.state.status === "disconnected"
+                }
+                busy={app.busy}
+                promptQueue={app.promptQueue}
+                onSendNowQueued={(id) => void app.handleSendNow(id)}
+                onRemoveQueued={app.handleRemoveQueued}
+                pendingImages={app.pendingImages}
+                pendingFiles={app.pendingFiles}
+                onRemoveImage={app.removePendingImage}
+                onRemoveFile={app.removePendingFile}
+                onAddFiles={(files) => void app.handleAddFiles(files)}
+                onCaptureScreenshot={(mode, options) =>
+                  void app.handleCaptureScreenshot(mode, options)
+                }
+                screenshotError={app.screenshotError}
+                permissionMode={app.permissionMode}
+                onPermissionModeChange={(mode) =>
+                  void app.handlePermissionModeChange(mode)
+                }
+                models={app.models}
+                onModelChange={(id, effort) =>
+                  void app.handleModelChange(id, effort)
+                }
+                onConfigureModels={() => openSettings("providers")}
+                contextUsage={app.contextUsage}
+                slashCwd={app.workspaceCwd}
+                voiceSttLanguage={guiSettings.voiceSttLanguage}
+                screenshotShortcut={guiSettings.screenshotShortcut}
+                voiceShortcut={guiSettings.voiceShortcut}
+                primaryShortcutTarget
+                workspace={
+                  !app.activeId
+                    ? {
+                        // Hide ephemeral task paths from the chip (never show
+                        // Documents/GrokBuildGUI/<timestamp> on draft).
+                        cwd: app.taskMode ? "" : app.workspaceCwd,
+                        canChange: app.canChangeWorkspace,
+                        recents: app.recentProjects,
+                        onSelectRecent: (dir) => app.selectProjectCwd(dir),
+                        onForgetRecent: (dir) => app.dropRecentProject(dir),
+                        isTaskMode: app.taskMode,
+                        onPick: () => void app.pickCwd(),
+                        onClear: () => app.clearWorkspace(),
+                      }
+                    : undefined
+                }
+                worktree={
+                  !app.activeId && app.canChangeWorkspace && !!app.projectCwd
+                    ? {
+                        isRepo: app.workspaceGit.isRepo,
+                        branch: app.workspaceGit.branch,
+                        cwd: app.projectCwd,
+                        baseRef: app.worktreeBaseRef,
+                        enabled: app.worktreeEnabled,
+                        onToggle: app.toggleWorktree,
+                        onSelectBranch: app.selectWorktreeBranch,
+                      }
+                    : undefined
+                }
+                worktreeProgress={app.worktreeProgress}
+              />
             </div>
 
-            {bottomMounted || bottomOpen ? (
+            {rightMounted || rightOpen ? (
               <SplitPanel
-                placement="bottom"
-                open={bottomOpen && !chromeLocked}
-                onCollapse={() => setBottomOpen(false)}
-                entry="terminal"
+                placement="right"
+                open={rightOpen}
+                onCollapse={() => {
+                  setRightOpen(false);
+                  setRightMaximized(false);
+                }}
+                entry="home"
+                focusTool={rightFocus}
+                sessionKey={panelSessionKey}
+                onRestore={() => {
+                  setRightMounted(true);
+                  setRightOpen(true);
+                }}
                 workspaceRoot={app.workspaceCwd}
+                maximized={rightMaximized && rightOpen}
+                onHasContentChange={(has) => {
+                  setRightHasContent(has);
+                  if (!has) setRightMaximized(false);
+                }}
                 onCreateSideTask={() => app.createSideTaskSession()}
                 sideTaskEnabled={!!app.activeId}
                 onCloseSideTask={(sessionId) =>
@@ -652,7 +554,6 @@ function WorkspaceApp({
                   void app.handleModelChange(id, effort)
                 }
                 onConfigureModels={() => openSettings("providers")}
-                slashRefreshKey={slashRefreshKey}
                 voiceSttLanguage={guiSettings.voiceSttLanguage}
                 screenshotShortcut={guiSettings.screenshotShortcut}
                 voiceShortcut={guiSettings.voiceShortcut}
@@ -660,7 +561,52 @@ function WorkspaceApp({
               />
             ) : null}
           </div>
-        )}
+
+          {bottomMounted || bottomOpen ? (
+            <SplitPanel
+              placement="bottom"
+              open={bottomOpen}
+              onCollapse={() => setBottomOpen(false)}
+              entry="terminal"
+              workspaceRoot={app.workspaceCwd}
+              onCreateSideTask={() => app.createSideTaskSession()}
+              sideTaskEnabled={!!app.activeId}
+              onCloseSideTask={(sessionId) =>
+                void app.closeSideTaskSession(sessionId)
+              }
+              sideTaskSessions={app.sideTasks}
+              sideTaskDisabled={
+                app.state.status === "connecting" ||
+                app.state.status === "error" ||
+                app.state.status === "disconnected"
+              }
+              onSubmitSideTask={(sessionId, text, images, files) =>
+                sendWithGuestReminder(() =>
+                  app.submitSideTaskPrompt(sessionId, text, images, files),
+                )
+              }
+              onCancelSideTask={(sessionId) =>
+                void app.cancelSession(sessionId)
+              }
+              sideTaskPromptQueue={app.sideTaskPromptQueue}
+              onSendNowSideTask={app.handleSendNow}
+              onRemoveQueuedSideTask={app.handleRemoveQueued}
+              models={app.models}
+              permissionMode={app.permissionMode}
+              onPermissionModeChange={(mode) =>
+                void app.handlePermissionModeChange(mode)
+              }
+              onModelChange={(id, effort) =>
+                void app.handleModelChange(id, effort)
+              }
+              onConfigureModels={() => openSettings("providers")}
+              voiceSttLanguage={guiSettings.voiceSttLanguage}
+              screenshotShortcut={guiSettings.screenshotShortcut}
+              voiceShortcut={guiSettings.voiceShortcut}
+              onOpenFile={handleOpenFile}
+            />
+          ) : null}
+        </div>
       </MainPanel>
 
       <SettingsDialog

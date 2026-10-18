@@ -82,8 +82,6 @@ export type ComposerProps = {
    * Prefer the active workspace so project skills resolve correctly.
    */
   slashCwd?: string;
-  /** Increment to force-reload slash skill cache (e.g. after plugin changes). */
-  slashRefreshKey?: number;
   permissionMode: PermissionMode;
   onPermissionModeChange: (mode: PermissionMode) => void;
   models: ModelState;
@@ -154,7 +152,6 @@ export function Composer({
   worktree,
   worktreeProgress,
   slashCwd,
-  slashRefreshKey = 0,
   permissionMode,
   onPermissionModeChange,
   models,
@@ -227,7 +224,6 @@ export function Composer({
     onChange,
     cwd: slashCwd,
     disabled,
-    refreshKey: slashRefreshKey,
     focusInput: () => {
       const el = ref.current;
       if (!el) return;

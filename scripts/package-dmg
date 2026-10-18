@@ -13,7 +13,7 @@ Usage:
   ./scripts/package-dmg --help      Show this help
 
 Run ./bootstrap once after cloning the repository. Both packaging modes verify
-and restore the pinned Grok Build and Open Computer Use runtime dependencies.
+and restore the pinned Grok Build runtime dependency.
 EOF
 }
 

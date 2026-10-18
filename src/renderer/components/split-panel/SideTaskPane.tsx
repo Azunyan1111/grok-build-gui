@@ -33,7 +33,6 @@ type Props = {
   promptQueue?: QueuedPrompt[];
   models: ModelState;
   permissionMode: PermissionMode;
-  slashRefreshKey?: number;
   voiceSttLanguage?: string;
   screenshotShortcut?: KeyboardShortcut;
   voiceShortcut?: KeyboardShortcut;
@@ -54,7 +53,6 @@ export function SideTaskPane({
   promptQueue = [],
   models,
   permissionMode,
-  slashRefreshKey,
   voiceSttLanguage,
   screenshotShortcut,
   voiceShortcut,
@@ -188,7 +186,6 @@ export function SideTaskPane({
         onModelChange={onModelChange}
         onConfigureModels={onConfigureModels}
         slashCwd={workspaceRoot}
-        slashRefreshKey={slashRefreshKey}
         voiceSttLanguage={voiceSttLanguage}
         screenshotShortcut={screenshotShortcut}
         voiceShortcut={voiceShortcut}

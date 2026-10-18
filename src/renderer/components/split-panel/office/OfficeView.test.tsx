@@ -19,11 +19,7 @@ import { OfficeView } from "./OfficeView";
 // The layout renderers need a real browser; here we only assert that the
 // viewers mount and hand the container bytes over.
 const renderAsync = vi.fn(async (_source: unknown) => undefined);
-const preview = vi.fn(async (_source: unknown) => undefined);
 vi.mock("docx-preview", () => ({ renderAsync: (source: unknown) => renderAsync(source) }));
-vi.mock("pptx-preview", () => ({
-  init: () => ({ preview, destroy: vi.fn() }),
-}));
 
 // jsdom has no layout engine and therefore no ResizeObserver.
 globalThis.ResizeObserver = class {
@@ -118,15 +114,6 @@ describe("OfficeView", () => {
     });
   });
 
-  it("offers no save affordance for a read-only format", async () => {
-    installApi({ ...sheet, editable: false, styled: false, styles: [] });
-    render(<OfficeView root="/ws" path="book.ods" />);
-
-    expect(await screen.findByText("Read-only format")).toBeTruthy();
-    fireEvent.click(screen.getByText("bolt"));
-    expect(screen.queryByDisplayValue("bolt")).toBeNull();
-  });
-
   it("re-reads the workbook when another sheet is selected", async () => {
     const api = installApi(sheet);
     render(<OfficeView root="/ws" path="book.xlsx" />);
@@ -148,14 +135,6 @@ describe("OfficeView", () => {
 
     await waitFor(() => expect(renderAsync).toHaveBeenCalled());
     expect(renderAsync.mock.calls[0]![0]).toBeInstanceOf(Blob);
-  });
-
-  it("hands pptx bytes to the layout renderer", async () => {
-    installApi({ kind: "slides", base64: "UEsDBA==", bytes: 5 });
-    render(<OfficeView root="/ws" path="deck.pptx" />);
-
-    await waitFor(() => expect(preview).toHaveBeenCalled());
-    expect(preview.mock.calls[0]![0]).toBeInstanceOf(ArrayBuffer);
   });
 
   it("falls back to open-externally for legacy containers", async () => {

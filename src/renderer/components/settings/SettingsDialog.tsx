@@ -4,16 +4,13 @@ import type { TFunction } from "i18next";
 import type { TerminalShellOption } from "../../../electron/terminalShell";
 import type { GuiSettings } from "../../lib/guiSettings";
 import { sttLanguageSettingOptions } from "../../lib/sttLanguage";
-import { ComputerUseSettings } from "./ComputerUseSettings";
 import { ProviderSettings } from "./ProviderSettings";
 import { ModelEndpointSettings } from "./ModelEndpointSettings";
-import { VisionFallbackSettings } from "./VisionFallbackSettings";
 import { UpdateSettings } from "./UpdateSettings";
 import type { AppUpdate } from "../../hooks/useAppUpdate";
 import {
   AppearanceIcon,
   CloseIcon,
-  ComputerIcon,
   InterfaceIcon,
   ProviderIcon,
   ShortcutIcon,
@@ -45,7 +42,6 @@ const SECTIONS = [
   { id: "voice", labelKey: "settings.voice", Icon: VoiceIcon },
   { id: "shortcuts", labelKey: "settings.shortcuts", Icon: ShortcutIcon },
   { id: "providers", labelKey: "provider.title", Icon: ProviderIcon },
-  { id: "computer", labelKey: "computer.title", Icon: ComputerIcon },
   { id: "update", labelKey: "update.title", Icon: UpdateIcon },
 ] as const satisfies readonly {
   id: string;
@@ -431,11 +427,8 @@ export function SettingsDialog({
               <>
                 <ProviderSettings />
                 <ModelEndpointSettings />
-                <VisionFallbackSettings />
               </>
             ) : null}
-
-            {section === "computer" ? <ComputerUseSettings /> : null}
 
             {section === "update" ? (
               <UpdateSettings update={update} />

@@ -60,16 +60,6 @@ export function ShortcutIcon() {
   );
 }
 
-export function ComputerIcon() {
-  return (
-    <Svg>
-      <rect x="2.5" y="4" width="19" height="13" rx="2" />
-      <path d="M8 21h8" />
-      <path d="M12 17v4" />
-    </Svg>
-  );
-}
-
 /** Down-arrow into a tray — app updates. */
 export function UpdateIcon() {
   return (

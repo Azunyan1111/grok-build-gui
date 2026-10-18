@@ -27,13 +27,6 @@ export const BUILTIN_SLASH_COMMANDS: SlashCommand[] = [
     plugin: null,
   },
   {
-    name: "computer",
-    description:
-      "Control native desktop apps with Open Computer Use. Example: /computer open TextEdit.",
-    source: "builtin",
-    plugin: null,
-  },
-  {
     // First-turn fallback: ACP publishes the authoritative command list once
     // a real session exists. The pinned 0.2.111 runtime supports /goal.
     name: "goal",

@@ -24,9 +24,6 @@ export function SlashCommandMenu({
     if (cmd.source === "builtin" && cmd.name === "browser") {
       return t("composer.browserCommandDesc");
     }
-    if (cmd.source === "builtin" && cmd.name === "computer") {
-      return t("composer.computerCommandDesc");
-    }
     const description = cmd.description ? shortDescription(cmd.description) : "";
     return cmd.inputHint
       ? `${description}${description ? " · " : ""}${cmd.inputHint}`

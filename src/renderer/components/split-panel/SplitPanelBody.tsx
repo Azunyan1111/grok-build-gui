@@ -26,7 +26,6 @@ type Props = {
   sideTaskPromptQueue?: QueuedPrompt[];
   models: ModelState;
   permissionMode: PermissionMode;
-  slashRefreshKey?: number;
   voiceSttLanguage?: string;
   screenshotShortcut?: KeyboardShortcut;
   voiceShortcut?: KeyboardShortcut;
@@ -56,7 +55,6 @@ export function SplitPanelBody({
   sideTaskPromptQueue = [],
   models,
   permissionMode,
-  slashRefreshKey,
   voiceSttLanguage,
   screenshotShortcut,
   voiceShortcut,
@@ -113,7 +111,6 @@ export function SplitPanelBody({
           )}
           models={models}
           permissionMode={permissionMode}
-          slashRefreshKey={slashRefreshKey}
           voiceSttLanguage={voiceSttLanguage}
           screenshotShortcut={screenshotShortcut}
           voiceShortcut={voiceShortcut}

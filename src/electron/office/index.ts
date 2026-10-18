@@ -2,12 +2,12 @@
  * Office document preview entry point.
  *
  * Spreadsheets are parsed here — the grid needs structured cells, not a
- * document to lay out. Word and PowerPoint only get read and size-checked here;
- * their layout renderers need a DOM and therefore run in the renderer.
+ * document to lay out. Word only gets read and size-checked here; its layout
+ * renderer needs a DOM and therefore runs in the renderer.
  */
 import fs from "node:fs/promises";
 import path from "node:path";
-import { readDocBytes, readSlideBytes } from "./bytes.js";
+import { readDocBytes } from "./bytes.js";
 import { readSheet } from "./sheet.js";
 import {
   MAX_OFFICE_BYTES,
@@ -22,10 +22,7 @@ const KIND_BY_EXT: Record<string, OfficeKind> = {
   ".csv": "sheet",
   ".tsv": "sheet",
   ".xlsx": "sheet",
-  ".xls": "sheet",
-  ".ods": "sheet",
   ".docx": "doc",
-  ".pptx": "slides",
 };
 
 /** `null` for anything the in-app viewers do not handle. */
@@ -34,11 +31,12 @@ export function officeKindForPath(filePath: string): OfficeKind | null {
 }
 
 /**
- * Legacy binary formats (.doc, .ppt, pre-2007 .xls variants) are a different
- * container entirely; the viewers offer "open externally" for those instead.
+ * Formats without an in-app parser are handed to the OS instead.
  */
 export function isLegacyOfficeBinary(filePath: string): boolean {
-  return [".doc", ".ppt"].includes(path.extname(filePath).toLowerCase());
+  return [".doc", ".ppt", ".pptx", ".xls", ".ods"].includes(
+    path.extname(filePath).toLowerCase(),
+  );
 }
 
 export async function readOfficeDocument(
@@ -57,6 +55,5 @@ export async function readOfficeDocument(
   }
 
   if (kind === "sheet") return await readSheet(filePath, options?.sheet);
-  if (kind === "doc") return await readDocBytes(filePath);
-  return await readSlideBytes(filePath);
+  return await readDocBytes(filePath);
 }

@@ -4,7 +4,7 @@
  */
 
 /** Preview families we render in-app. `null` elsewhere means "not an Office file". */
-export type OfficeKind = "sheet" | "doc" | "slides";
+export type OfficeKind = "sheet" | "doc";
 
 /**
  * Visual attributes of a cell, kept in a per-document lookup table.
@@ -68,7 +68,7 @@ export type SheetDocument = {
   truncated: boolean;
   /** Editing is only offered for formats we can write back safely. */
   editable: boolean;
-  /** False for formats read without style support (.xls/.ods, csv). */
+  /** False for delimited text formats without style support. */
   styled: boolean;
 };
 
@@ -86,15 +86,7 @@ export type DocDocument = {
   bytes: number;
 };
 
-/** Presentation handed to the renderer as raw bytes, for the same reason. */
-export type SlidesDocument = {
-  kind: "slides";
-  /** Base64 of the .pptx container. */
-  base64: string;
-  bytes: number;
-};
-
-export type OfficeDocument = SheetDocument | DocDocument | SlidesDocument;
+export type OfficeDocument = SheetDocument | DocDocument;
 
 /** Largest file we will parse; OOXML expands a lot in memory. */
 export const MAX_OFFICE_BYTES = 32 * 1024 * 1024;

@@ -1,6 +1,5 @@
 const path = require("node:path");
 const grokManifest = require("./runtime/grok-build.json");
-const computerUseManifest = require("./runtime/open-computer-use.json");
 
 /**
  * Signing identity, supplied by the release script. Public releases use the
@@ -82,10 +81,6 @@ module.exports = {
         grokPlatform.artifactPlatform,
       ),
       to: grokManifest.packagedResourceSubdir,
-    },
-    {
-      from: computerUseManifest.artifactRelativePath,
-      to: computerUseManifest.packagedResourceSubdir,
     },
   ],
   mac: {

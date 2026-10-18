@@ -80,7 +80,7 @@
           "name": "Is Grok Build GUI free and open source?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. The GUI is MIT-licensed. The bundled Grok Build artifact is Apache-2.0 and ships with its upstream notices, and Open Computer Use is MIT-licensed."
+            "text": "Yes. The GUI is MIT-licensed. The bundled Grok Build artifact is Apache-2.0 and ships with its upstream notices."
           }
         }
       ]
@@ -176,9 +176,9 @@
         asks, you allow or deny, per call — from ask-for-approval through full access.</p>
       </div>
       <div class="card">
-        <h3>Browser the agent can drive</h3>
-        <p>A webview pane exposed to the agent as an MCP tool server. You watch every
-        action; password fields always stop for explicit approval and are redacted.</p>
+        <h3>Built-in browser</h3>
+        <p>A sandboxed webview pane for user-directed browsing. It is not exposed to the
+        agent as a tool server.</p>
       </div>
       <div class="card">
         <h3>Terminal and file tree</h3>
@@ -206,9 +206,8 @@
         streamed back in on load, and a workspace picker with recent projects.</p>
       </div>
       <div class="card">
-        <h3>Account and plugins</h3>
-        <p>Grok sign-in via the CLI's OAuth flow with usage and quota display, plus plugin
-        install, enable, disable and uninstall.</p>
+        <h3>Account</h3>
+        <p>Grok sign-in via the CLI's OAuth flow with usage and quota display.</p>
       </div>
       <div class="card">
         <h3>English and 简体中文</h3>
@@ -244,11 +243,8 @@
       <li><strong>Main → agent.</strong> The main process spawns the pinned
       <code>grok agent stdio</code> and speaks ACP over its stdio pipes. Session state,
       tool execution and goal loops live in the agent.</li>
-      <li><strong>Agent → browser.</strong> A loopback HTTP bridge on a random port with a
-      random 32-byte bearer token backs an MCP server descriptor handed to the agent. The
-      agent's MCP child forwards <code>browser_*</code> calls back over that authenticated
-      bridge, which drives the webview you are watching. The agent never touches the
-      renderer directly.</li>
+      <li><strong>Browser.</strong> The sandboxed webview is a user-facing GUI panel and is
+      not injected into agent sessions.</li>
       <li><strong>Two safety layers.</strong> App permissions (ACP
       <code>request_permission</code> → the GUI modal) are what this app implements. The
       optional OS sandbox (Seatbelt/Landlock) is enforced by the agent and fails hard with
@@ -302,8 +298,7 @@ cd grok-build-gui
 
     <h3>Is it free?</h3>
     <p>Yes. The GUI is MIT-licensed. The bundled Grok Build artifact is Apache-2.0 and
-    ships with its upstream and third-party notices; Open Computer Use 0.2.1 is
-    MIT-licensed.</p>
+    ships with its upstream and third-party notices.</p>
 
     <h3>How does it keep the agent from doing something unwanted?</h3>
     <p>Every tool call the agent flags goes through the ACP permission request, which

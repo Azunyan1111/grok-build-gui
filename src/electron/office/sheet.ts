@@ -7,8 +7,6 @@
  * is what keeps an edit from flattening the document, which is exactly what
  * rebuilding a workbook from values does.
  *
- * `.xls` / `.ods` fall back to SheetJS, values only: no reliable style model.
- *
  * Delimited text (csv/tsv) is parsed here rather than by either library,
  * because both coerce cell types on read and would turn an id column like
  * `00734` into `734` the first time a user saves.
@@ -25,7 +23,7 @@ import {
 } from "./types.js";
 
 const DELIMITED = new Set([".csv", ".tsv"]);
-/** Formats we are willing to write back. Legacy .xls / .ods stay read-only. */
+/** Formats we can read and write without changing container families. */
 const WRITABLE = new Set([".csv", ".tsv", ".xlsx"]);
 
 function ext(filePath: string): string {
@@ -104,11 +102,6 @@ export function serializeDelimited(
   return body.length > 0 ? `${body}\n` : "";
 }
 
-/** SheetJS ships a large UMD bundle — keep it off the startup path. */
-async function sheetjs() {
-  return await import("@e965/xlsx");
-}
-
 async function exceljs() {
   return (await import("exceljs")).default;
 }
@@ -117,8 +110,7 @@ async function exceljs() {
  * Render a cell the way a spreadsheet app would.
  *
  * ExcelJS hands back the *typed* value and the number format separately, so the
- * format is applied here with SheetJS's SSF — the same formatter Excel's own
- * codes were written for.
+ * common decimal, grouping, percentage, and date formats are applied locally.
  */
 export async function displayValue(cell: {
   value: unknown;
@@ -141,7 +133,7 @@ export async function displayValue(cell: {
     }
     if ("formula" in record || "sharedFormula" in record) return "";
     if (value instanceof Date) {
-      return await formatNumber(dateToSerial(value), cell.numFmt ?? "yyyy-mm-dd");
+      return formatDate(value, cell.numFmt ?? "yyyy-mm-dd");
     }
     return String(value);
   }
@@ -153,16 +145,32 @@ export async function displayValue(cell: {
   return String(value);
 }
 
-/** Excel's serial epoch is 1899-12-30 in the 1900 date system. */
-function dateToSerial(date: Date): number {
-  return date.getTime() / 86_400_000 + 25569;
+function formatDate(date: Date, numFmt: string): string {
+  const values: Record<string, string> = {
+    yyyy: String(date.getUTCFullYear()).padStart(4, "0"),
+    yy: String(date.getUTCFullYear() % 100).padStart(2, "0"),
+    mm: String(date.getUTCMonth() + 1).padStart(2, "0"),
+    m: String(date.getUTCMonth() + 1),
+    dd: String(date.getUTCDate()).padStart(2, "0"),
+    d: String(date.getUTCDate()),
+  };
+  return numFmt.replace(/yyyy|yy|mm|m|dd|d/g, (token) => values[token]!);
 }
 
 async function formatNumber(value: number, numFmt?: string): Promise<string> {
   if (!numFmt || numFmt === "General") return String(value);
   try {
-    const XLSX = await sheetjs();
-    return XLSX.SSF.format(numFmt, value);
+    const format = numFmt.split(";")[0] ?? numFmt;
+    const percentage = format.includes("%");
+    const decimal = /\.([0#]+)/.exec(format)?.[1] ?? "";
+    const minimumFractionDigits = [...decimal].filter((c) => c === "0").length;
+    const maximumFractionDigits = decimal.length;
+    const rendered = new Intl.NumberFormat("en-US", {
+      useGrouping: format.includes(","),
+      minimumFractionDigits,
+      maximumFractionDigits,
+    }).format(percentage ? value * 100 : value);
+    return percentage ? `${rendered}%` : rendered;
   } catch {
     // Unsupported or malformed format code — the raw number still informs.
     return String(value);
@@ -220,54 +228,13 @@ async function readDelimitedSheet(filePath: string): Promise<SheetDocument> {
   });
 }
 
-/** `.xls` / `.ods`: values only, via SheetJS. */
-async function readLegacySheet(
-  filePath: string,
-  requestedSheet?: string,
-): Promise<SheetDocument> {
-  const XLSX = await sheetjs();
-  const workbook = XLSX.read(await fs.readFile(filePath), { type: "buffer" });
-  const sheetNames = workbook.SheetNames.slice();
-  const sheet =
-    requestedSheet && sheetNames.includes(requestedSheet)
-      ? requestedSheet
-      : sheetNames[0];
-
-  if (!sheet) {
-    return plainDocument({
-      sheetNames: [],
-      sheet: "",
-      rows: [[{ v: "" }]],
-      truncated: false,
-      editable: false,
-    });
-  }
-
-  const aoa = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheet]!, {
-    header: 1,
-    raw: false,
-    blankrows: true,
-    defval: "",
-  });
-  const { rows, capped } = rectangular(
-    aoa.map((row) => row.map((cell) => ({ v: cell == null ? "" : String(cell) }))),
-  );
-  return plainDocument({
-    sheetNames,
-    sheet,
-    rows,
-    truncated: capped,
-    editable: false,
-  });
-}
-
 export async function readSheet(
   filePath: string,
   requestedSheet?: string,
 ): Promise<SheetDocument> {
   if (isDelimited(filePath)) return await readDelimitedSheet(filePath);
   if (ext(filePath) !== ".xlsx") {
-    return await readLegacySheet(filePath, requestedSheet);
+    throw new Error(`Unsupported spreadsheet type: ${ext(filePath)}`);
   }
 
   const ExcelJS = await exceljs();

@@ -32,26 +32,12 @@ import type {
 } from "./providers/customEndpoints";
 import type { EndpointPreset } from "./providers/endpointPresets";
 import type { DiscoveredModel, DiscoveryResult } from "./providers/modelDiscovery";
-import type {
-  VisionFallbackInput,
-  VisionFallbackSettings,
-} from "./providers/visionFallback";
-import type {
-  ComputerUsePermissionCheckResult,
-  ComputerUseStatus,
-} from "./computerUse";
 import type { SlashCommand } from "./slashCommands";
 import type { UpdateStatus } from "./updater";
 import type {
   TerminalShellOption,
   TerminalShellPreference,
 } from "./terminalShell";
-import type {
-  AvailablePlugin,
-  InstalledPlugin,
-  PluginActionResult,
-  PluginListResult,
-} from "./plugins";
 
 export type {
   AgentSessionSearchHit,
@@ -87,18 +73,9 @@ export type {
   DiscoveredModel,
   DiscoveryResult,
   EndpointPreset,
-  VisionFallbackInput,
-  VisionFallbackSettings,
 };
-export type { ComputerUsePermissionCheckResult, ComputerUseStatus };
 export type { SlashCommand };
 export type { UpdateStatus };
-export type {
-  AvailablePlugin,
-  InstalledPlugin,
-  PluginActionResult,
-  PluginListResult,
-};
 
 export type GrokProbe = {
   path: string;
@@ -183,11 +160,6 @@ export type BrowserState = {
   viewport: { width: number; height: number };
   /** True if any browser slot is open. */
   anyOpen: boolean;
-};
-
-export type BrowserOpenRequest = {
-  startUrl?: string;
-  nonce: number;
 };
 
 /** @deprecated Screenshot frames are no longer streamed. */
@@ -510,13 +482,6 @@ const api = {
   /** Create ~/Documents/GrokBuildGUI/<timestamp>/ for a new task session. */
   createTaskWorkspace: (): Promise<string> =>
     ipcRenderer.invoke("app:create-task-workspace"),
-  getComputerUseStatus: (): Promise<ComputerUseStatus> =>
-    ipcRenderer.invoke("computer-use:get-status"),
-  setComputerUseEnabled: (enabled: boolean): Promise<ComputerUseStatus> =>
-    ipcRenderer.invoke("computer-use:set-enabled", enabled),
-  checkComputerUsePermissions:
-    (): Promise<ComputerUsePermissionCheckResult> =>
-      ipcRenderer.invoke("computer-use:check-permissions"),
   getGrokAccount: (): Promise<GrokAccount> =>
     ipcRenderer.invoke("grok:get-account"),
   loginGrok: (): Promise<GrokAuthActionResult> =>
@@ -567,16 +532,6 @@ const api = {
   removeModelEndpoint: (id: string): Promise<{ ok: true }> =>
     ipcRenderer.invoke("provider:endpoints:remove", id),
   /**
-   * Image fallback used when the selected model is text-only. As with
-   * endpoints, the key goes in and only `hasApiKey` comes back.
-   */
-  getVisionFallback: (): Promise<VisionFallbackSettings> =>
-    ipcRenderer.invoke("provider:vision:get"),
-  saveVisionFallback: (
-    input: VisionFallbackInput,
-  ): Promise<VisionFallbackSettings> =>
-    ipcRenderer.invoke("provider:vision:save", input),
-  /**
    * Launch the bundled Grok Build interactive TUI in the system terminal.
    * Optional cwd defaults to the active workspace on the main process.
    */
@@ -594,17 +549,6 @@ const api = {
     | { ok: true; commands: SlashCommand[] }
     | { ok: false; error: string }
   > => ipcRenderer.invoke("grok:list-slash-commands", cwd),
-
-  listPlugins: (): Promise<PluginListResult> =>
-    ipcRenderer.invoke("grok:list-plugins"),
-  installPlugin: (source: string): Promise<PluginActionResult> =>
-    ipcRenderer.invoke("grok:install-plugin", source),
-  uninstallPlugin: (name: string): Promise<PluginActionResult> =>
-    ipcRenderer.invoke("grok:uninstall-plugin", name),
-  enablePlugin: (name: string): Promise<PluginActionResult> =>
-    ipcRenderer.invoke("grok:enable-plugin", name),
-  disablePlugin: (name: string): Promise<PluginActionResult> =>
-    ipcRenderer.invoke("grok:disable-plugin", name),
 
   /** Workspace file tree + text preview (Files panel). */
   listDir: (opts: {
@@ -760,9 +704,6 @@ const api = {
     ipcRenderer.invoke("browser:focus", id),
   onBrowserState: (cb: (state: BrowserState) => void) =>
     on("browser:state", (p) => cb(p as BrowserState)),
-  /** Browser MCP requested the visible right-side browser tab. */
-  onBrowserOpenRequest: (cb: (request: BrowserOpenRequest) => void) =>
-    on("browser:request-open", (p) => cb(p as BrowserOpenRequest)),
   /** Destroy the retained renderer webview after its browser tab closes. */
   onBrowserDestroyRequest: (cb: (id: BrowserId) => void) =>
     on("browser:destroy", (p) => cb(String(p))),
@@ -862,8 +803,6 @@ const api = {
     ),
   onLog: (cb: (entry: { level: string; text: string }) => void) =>
     on("agent:log", (p) => cb(p as { level: string; text: string })),
-  onComputerUseStatus: (cb: (status: ComputerUseStatus) => void) =>
-    on("computer-use:status", (p) => cb(p as ComputerUseStatus)),
 };
 
 contextBridge.exposeInMainWorld("grok", api);

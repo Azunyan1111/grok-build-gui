@@ -11,7 +11,6 @@ import {
   prepareFiles,
 } from "../lib/attachments";
 import { parseBrowserSlash } from "../lib/browserSlash";
-import { parseComputerSlash } from "../lib/computerSlash";
 import { useTranslation } from "react-i18next";
 import {
   adoptProvisionalSession,
@@ -1528,23 +1527,13 @@ export function useGrokApp() {
       promptText = browserCmd.agentText || "";
     }
 
-    const computerCmd = text
-      ? parseComputerSlash(text)
-      : { kind: "none" as const };
-    if (computerCmd.kind === "prompt") {
-      promptText = computerCmd.agentText;
-    }
-
     if (state.status !== "ready") {
       await connect();
       const st = await window.grok.getState();
       if (st.status !== "ready") return;
     }
 
-    const displayText =
-      browserCmd.kind === "open" || computerCmd.kind === "prompt"
-        ? text
-        : promptText;
+    const displayText = browserCmd.kind === "open" ? text : promptText;
 
     // Clear the composer immediately so the first-turn create/prompt path does
     // not feel frozen while session/new and model sync round-trip. Also drop

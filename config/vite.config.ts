@@ -6,11 +6,7 @@ import path from "node:path";
 const projectRoot = path.resolve(__dirname, "..");
 const rendererRoot = path.join(projectRoot, "src", "renderer");
 const electronRoot = path.join(projectRoot, "src", "electron");
-const browserIntegrationBuild =
-  process.env.GROK_GUI_BROWSER_INTEGRATION === "1";
-const buildRoot = browserIntegrationBuild
-  ? path.join(projectRoot, "out", "browser-integration")
-  : path.join(projectRoot, "out");
+const buildRoot = path.join(projectRoot, "out");
 const rendererOut = path.join(buildRoot, "renderer");
 const electronOut = path.join(buildRoot, "electron");
 
@@ -30,15 +26,6 @@ export default defineConfig({
             main: {
               entry: {
                 main: path.join(electronRoot, "main.ts"),
-                browserMcpServer: path.join(electronRoot, "browserMcpServer.ts"),
-                ...(browserIntegrationBuild
-                  ? {
-                      browserIntegrationHarness: path.join(
-                        electronRoot,
-                        "browserIntegrationHarness.ts",
-                      ),
-                    }
-                  : {}),
               },
               vite: {
                 build: {
@@ -46,13 +33,11 @@ export default defineConfig({
                   emptyOutDir: false,
                   rollupOptions: {
                     // Native modules — load from node_modules at runtime (not bundled).
-                    // koffi: optional, Windows window-snap only (dynamic import chain).
                     // electron-updater resolves `app-update.yml` relative to its
                     // real module path, so it must not be bundled either.
                     external: [
                       "electron",
                       "node-pty",
-                      "koffi",
                       "electron-updater",
                     ],
                   },

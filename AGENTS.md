@@ -62,8 +62,7 @@ task needs them:
 ## Runtime and repository hygiene
 
 - `./bootstrap` is the supported clean-clone setup path.
-- Grok Build and Open Computer Use versions and integrity hashes are pinned in
-  `config/runtime/`.
+- The Grok Build version and integrity hashes are pinned in `config/runtime/`.
 - Downloaded runtime binaries belong under ignored `thirdparty/`; never commit
   them.
 - Never commit `node_modules/`, `out/`, `tmp/`, `.app`, DMG, blockmap, extracted
@@ -106,6 +105,6 @@ Run checks proportional to the change:
 - Renderer or Electron startup paths: run `npm run dev` and confirm the window
   loads; stop the process after verification.
 - DMG or packaging paths: run `./scripts/package-dmg --preview` and confirm the
-  packaged app contains both `grok-build` and `open-computer-use`.
+  packaged app contains `grok-build`.
 - Before handoff: run `git diff --check` and verify generated files are still
   ignored and unstaged.

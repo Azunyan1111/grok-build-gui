@@ -96,8 +96,6 @@ export const en = {
   "nav.searchChatsShortcut": "Search chats (⌘K)",
   "nav.newChat": "New chat",
   "nav.newChatIn": "New chat in {{name}}",
-  "nav.plugins": "Plugins",
-  "nav.managePlugins": "Manage plugins",
   "nav.projects": "Projects",
   "nav.tasks": "Tasks",
   "nav.newTask": "New task",
@@ -155,7 +153,6 @@ export const en = {
   "account.signingOut": "Signing out…",
   "account.signOut": "Sign out",
 
-  "main.plugins": "Plugins",
   "main.loadingHistory": "Loading session history…",
   "main.chooseWorkspace":
     "Choose a workspace below, then type a message to start.",
@@ -293,8 +290,6 @@ export const en = {
   "composer.promptFailed": "Prompt failed.",
   "composer.browserCommandDesc":
     "Open the built-in live browser for agent automation. Use /browser off to close it.",
-  "composer.computerCommandDesc":
-    "Control desktop apps with Open Computer Use. Example: /computer open TextEdit.",
   "composer.queued": "Queued follow-ups",
   "composer.sendNow": "Send now",
   "composer.removeQueue": "Remove from queue",
@@ -350,7 +345,6 @@ export const en = {
   "permission.heading.edit": "Allow edit?",
   "permission.heading.delete": "Allow delete?",
   "permission.heading.read": "Allow access?",
-  "permission.heading.mcp": "Allow tool?",
   "permission.heading.other": "Allow this action?",
   "permission.executePurpose": "The agent wants to run this shell command.",
   "permission.destructiveRisk":
@@ -367,10 +361,6 @@ export const en = {
   "permission.editFile": "The agent wants to edit a file.",
   "permission.changePreview": "Change preview",
   "permission.newContentPreview": "New content (preview)",
-  "permission.externalTool": "External tool",
-  "permission.callTool": "Call {{name}}",
-  "permission.tool": "Tool",
-  "permission.arguments": "Arguments",
   "permission.readPath": "Read {{path}}",
   "permission.path": "Path",
   "permission.approvalPurpose":
@@ -519,7 +509,6 @@ export const en = {
 
   "office.kind.sheet": "Spreadsheet",
   "office.kind.doc": "Document",
-  "office.kind.slides": "Presentation",
   "office.kind.unsupported": "Unsupported",
   "office.openExternally": "Open externally",
   "office.truncated": "Preview truncated",
@@ -531,50 +520,6 @@ export const en = {
   "office.showMore": "Show more ({{shown}} of {{total}} rows)",
   "office.unsupportedHint":
     "This legacy format cannot be previewed in-app. Open it externally to view it.",
-
-  "plugins.title": "Plugins",
-  "plugins.subtitle":
-    "Install, enable, or remove Grok plugins (skills, MCP, hooks).",
-  "plugins.installed": "Installed",
-  "plugins.marketplace": "Marketplace",
-  "plugins.apiUnavailable": "Plugin API unavailable — restart the app.",
-  "plugins.actionFailed": "Action failed",
-  "plugins.done": "Done",
-  "plugins.installedFrom": "Installed from {{source}}",
-  "plugins.installSource": "Install: owner/repo, git URL, or local path",
-  "plugins.install": "Install",
-  "plugins.installing": "Installing…",
-  "plugins.installHint":
-    "Installing trusts the plugin (hooks & MCP may run). Prefer sources you trust.",
-  "plugins.searchInstalled": "Search installed…",
-  "plugins.searchMarketplace": "Search marketplace…",
-  "plugins.loading": "Loading plugins…",
-  "plugins.noInstalledMatch": "No installed plugins match.",
-  "plugins.noInstalled":
-    "No plugins installed yet. Use Marketplace or paste a source above.",
-  "plugins.on": "On",
-  "plugins.off": "Off",
-  "plugins.enable": "Enable",
-  "plugins.disable": "Disable",
-  "plugins.uninstall": "Uninstall",
-  "plugins.uninstallConfirm":
-    "Uninstall plugin “{{name}}”? This cannot be undone.",
-  "plugins.loadingMarketplace": "Loading marketplace…",
-  "plugins.noMarketplaceMatch": "No marketplace plugins match.",
-  "plugins.noMarketplace": "No marketplace plugins found.",
-  "plugins.installConfirm":
-    "Install “{{name}}” from the marketplace?\n\nThis trusts the plugin so hooks and MCP servers can run.",
-  "plugins.skillCount_one": "{{count}} skill",
-  "plugins.skillCount_other": "{{count}} skills",
-  "plugins.agentCount_one": "{{count}} agent",
-  "plugins.agentCount_other": "{{count}} agents",
-  "plugins.mcpCount": "{{count}} MCP",
-  "plugins.hooks": "hooks",
-  "plugins.agentsLabel": "agents",
-  "plugins.mcpLabel": "MCP",
-  "plugins.grokBinaryNotFound": "Grok executable not found.",
-  "plugins.sourceRequired": "A plugin source is required.",
-  "plugins.nameRequired": "A plugin name is required.",
 
   "endpoints.title": "Endpoints",
   "endpoints.description":
@@ -612,20 +557,6 @@ export const en = {
     "Fetch the endpoint's catalog, then tick the models you want.",
   "endpoints.loading": "Fetching…",
   "endpoints.save": "Save",
-
-  "vision.title": "Image reading",
-  "vision.description":
-    "Text-only models such as DeepSeek V4 Flash and V4 Pro cannot take an image. When one is selected, attachments are transcribed by the model below and the transcription is sent in their place.",
-  "vision.enable": "Read images with a fallback model",
-  "vision.enableHint":
-    "Without this, attaching an image to a text-only model is refused instead of silently dropped.",
-  "vision.model": "Vision model",
-  "vision.baseUrl": "Endpoint URL",
-  "vision.apiKey": "API key",
-  "vision.keyPlaceholder": "Paste your OpenRouter API key",
-  "vision.sharedKeyHint":
-    "Leave the key blank to reuse the key from a saved OpenRouter endpoint.",
-  "vision.applyHint": "Applies to the next message you send.",
 
   "models.groupBuiltin": "Built-in",
   "models.groupOAuth": "OAuth",
@@ -673,35 +604,6 @@ export const en = {
     "This build has no release feed configured, so it cannot update itself",
   "update.autoHint":
     "Checked automatically at startup. Downloads only start when you ask, and install as soon as they finish.",
-
-  "computer.title": "Desktop control",
-  "computer.description": "Uses the built-in Open Computer Use artifact.",
-  "computer.checking": "Checking…",
-  "computer.ready": "Ready",
-  "computer.missing": "Missing",
-  "computer.notPrepared": "Not prepared",
-  "computer.incompatible": "Incompatible",
-  "computer.disabled": "Disabled",
-  "computer.bundled": "built in",
-  "computer.project": "managed",
-  "computer.unknown": "unknown",
-  "computer.versionDetail": "Version {{version}} · {{source}}",
-  "computer.supportedVersions": "Requires {{range}}",
-  "computer.enable": "Enable Open Computer Use",
-  "computer.prepareHint": "Artifact missing. From source, run {{command}}.",
-  "computer.macPermissions":
-    "This component requires system access to control your computer. Select Check permissions to confirm access is allowed.",
-  "computer.checkPermissions": "Check permissions",
-  "computer.checkingPermissions": "Checking…",
-  "computer.permissionsAllowed": "Allowed",
-  "computer.permissionCheckFailed": "Permission check failed.",
-  "computer.notPreparedDetail":
-    "The built-in Open Computer Use artifact is not prepared.",
-  "computer.versionReadFailed": "Could not read the Open Computer Use version.",
-  "computer.unavailable": "Open Computer Use is not available.",
-  "computer.permissionStatusFailed":
-    "Could not read the Open Computer Use permission status.",
-  "computer.applyHint": "Applies to new or reloaded sessions. Use {{command}}.",
 
   "resize.sidebar": "Resize sidebar",
   "resize.browser": "Resize browser pane",

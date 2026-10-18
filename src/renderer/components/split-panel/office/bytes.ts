@@ -1,4 +1,4 @@
-/** Decode the base64 the main process ships for docx/pptx containers. */
+/** Decode the base64 the main process ships for docx containers. */
 
 export function base64ToBytes(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64);

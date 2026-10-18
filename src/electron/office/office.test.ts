@@ -36,12 +36,14 @@ describe("officeKindForPath", () => {
     expect(officeKindForPath("/a/b.xlsx")).toBe("sheet");
     expect(officeKindForPath("/a/B.CSV")).toBe("sheet");
     expect(officeKindForPath("/a/b.docx")).toBe("doc");
-    expect(officeKindForPath("/a/b.pptx")).toBe("slides");
   });
 
   it("rejects legacy binaries and unrelated files", () => {
     expect(officeKindForPath("/a/b.doc")).toBeNull();
     expect(officeKindForPath("/a/b.ppt")).toBeNull();
+    expect(officeKindForPath("/a/b.pptx")).toBeNull();
+    expect(officeKindForPath("/a/b.xls")).toBeNull();
+    expect(officeKindForPath("/a/b.ods")).toBeNull();
     expect(officeKindForPath("/a/b.ts")).toBeNull();
   });
 });
@@ -254,7 +256,7 @@ describe("style helpers", () => {
   });
 });
 
-describe("docx and pptx", () => {
+describe("docx", () => {
   it("hands the container bytes to the renderer", async () => {
     const dir = await scratch();
     const file = path.join(dir, "letter.docx");

@@ -80,24 +80,6 @@ describe("detectModelReasoningCapability", () => {
     });
   });
 
-  it("uses DashScope-specific effort values", () => {
-    expect(detect("dashscope", "qwen3.8-max")).toEqual({
-      supportsReasoningEffort: true,
-      reasoningEfforts: ["low", "medium", "xhigh"],
-      defaultReasoningEffort: "xhigh",
-    });
-    expect(detect("dashscope", "deepseek-v4-pro")).toEqual({
-      supportsReasoningEffort: true,
-      reasoningEfforts: ["high", "max"],
-      defaultReasoningEffort: "high",
-    });
-    expect(detect("dashscope", "kimi-k3")).toEqual({
-      supportsReasoningEffort: true,
-      reasoningEfforts: ["max"],
-      defaultReasoningEffort: "max",
-    });
-  });
-
   it("keeps unknown custom relay models manually configurable", () => {
     expect(detect("custom", "vendor/new-model")).toEqual({});
   });

@@ -150,30 +150,6 @@ function glmCapability(
   return { supportsReasoningEffort: false };
 }
 
-function dashScopeCapability(
-  presetId: string,
-  modelId: string,
-  apiBackend: ApiBackend,
-): ModelReasoningCapability | null {
-  if (presetId !== "dashscope") return null;
-  if (apiBackend !== "chat_completions") {
-    return { supportsReasoningEffort: false };
-  }
-  if (modelId.startsWith("qwen3.8-max")) {
-    return supported(["low", "medium", "xhigh"], "xhigh");
-  }
-  if (/^glm-5(?:\.1|\.2)?(?:-|$)/.test(modelId)) {
-    return supported(["high", "max"], "high");
-  }
-  if (/^deepseek-v4-(?:flash|pro)(?:-|$)/.test(modelId)) {
-    return supported(["high", "max"], "high");
-  }
-  if (modelId === "kimi" || modelId.startsWith("kimi-k3")) {
-    return supported(["max"], "max");
-  }
-  return { supportsReasoningEffort: false };
-}
-
 /**
  * Detect configurable reasoning effort, not merely whether a model can think.
  * Rules mirror the providers' documented wire parameters as reviewed on
@@ -192,13 +168,6 @@ export function detectModelReasoningCapability(
   ) {
     return anthropicCapability(modelId);
   }
-
-  const dashScope = dashScopeCapability(
-    input.presetId,
-    modelId,
-    input.apiBackend,
-  );
-  if (dashScope) return dashScope;
 
   const deepSeek = deepSeekCapability(
     input.presetId,

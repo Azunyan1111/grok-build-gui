@@ -106,27 +106,6 @@ export function SquarePenIcon() {
   );
 }
 
-/** Lucide Puzzle — plugins manager entry. */
-export function PuzzleIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 2.997 3.015 1 1 0 0 0-.822 1.139l.546 9.124a2 2 0 0 1-1.978 2.162H6.177a2 2 0 0 1-1.978-2.162l.546-9.124A1 1 0 0 0 3.923 6.93a2.5 2.5 0 1 1 2.997-3.014 1 1 0 0 0 1.68.474L10 6.5l5.39-2.11Z" />
-      <path d="M10 12h4" />
-      <path d="M10 16h4" />
-    </svg>
-  );
-}
-
 /** Lucide Search — session / thread search (Codex-style). */
 export function SearchIcon() {
   return (

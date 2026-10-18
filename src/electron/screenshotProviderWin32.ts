@@ -7,8 +7,8 @@ export type Win32RegionOptions = {
 };
 
 /**
- * Windows region capture provider: getUserMedia freeze + multi-display overlay
- * + Win32 (koffi) window snap. Dynamically imported only on win32.
+ * Windows region capture provider: getUserMedia freeze + multi-display overlay.
+ * Dynamically imported only on win32.
  */
 export async function captureWin32Region(
   _parent: BrowserWindow | null,

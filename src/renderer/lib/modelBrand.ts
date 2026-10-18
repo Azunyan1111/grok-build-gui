@@ -64,7 +64,7 @@ const PATTERNS: Array<[BrandId, RegExp]> = [
   ["kimi", /kimi|moonshot/],
   ["glm", /\bglm\b|zhipu|bigmodel|chatglm/],
   ["minimax", /minimax|abab/],
-  ["qwen", /qwen|tongyi|dashscope/],
+  ["qwen", /qwen|tongyi/],
   ["gemini", /gemini|palm/],
   // Ollama must precede Llama: "ollama" contains "llama".
   ["ollama", /ollama/],

@@ -23,7 +23,6 @@ import {
 import { folderName, groupSessions } from "./groupSessions";
 import {
   PanelLeftIcon,
-  PuzzleIcon,
   SearchIcon,
   SquarePenIcon,
 } from "./icons";
@@ -48,10 +47,6 @@ export type SidebarProps = {
   onDeleteProject: (cwd: string, projectName: string) => void;
   /** Only used when connection failed — re-try auto connect. */
   onRetryConnect: () => void;
-  /** Plugins main-view is active (Codex-style nav tab). */
-  pluginsActive?: boolean;
-  /** Switch main content to the plugins manager. */
-  onOpenPlugins?: () => void;
   /** Switch main content to Settings (from account menu). */
   onOpenSettings?: () => void;
   grokAccount: GrokAccount;
@@ -81,8 +76,6 @@ export function Sidebar({
   onDelete,
   onDeleteProject,
   onRetryConnect,
-  pluginsActive,
-  onOpenPlugins,
   onOpenSettings,
   grokAccount,
   onLogin,
@@ -335,18 +328,6 @@ export function Sidebar({
           <SquarePenIcon />
           <span>{t("nav.newChat")}</span>
         </button>
-        {onOpenPlugins ? (
-          <button
-            type="button"
-            className={`sidebar-nav-btn sidebar-plugins-btn${pluginsActive ? " active" : ""}`}
-            onClick={onOpenPlugins}
-            title={t("nav.managePlugins")}
-            aria-current={pluginsActive ? "page" : undefined}
-          >
-            <PuzzleIcon />
-            <span>{t("nav.plugins")}</span>
-          </button>
-        ) : null}
       </div>
 
       <SessionList

@@ -15,7 +15,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   sessionManager,
-  type ClientMcpStdio,
   type WorktreeCreateOptions,
 } from "./acp/sessionManager.js";
 import {
@@ -28,11 +27,6 @@ import {
   registerBrowserIpc,
   shutdownBrowser,
 } from "./browserIpc.js";
-import { startBrowserBridge, stopBrowserBridge } from "./browserBridge.js";
-import {
-  computerUseManager,
-  type ComputerUseStatus,
-} from "./computerUse.js";
 import { pickDefaultCwd } from "./defaultCwd.js";
 import { registerFilesIpc } from "./filesIpc.js";
 import {
@@ -59,13 +53,10 @@ import {
 import { ENDPOINT_PRESETS } from "./providers/endpointPresets.js";
 import {
   discoverEndpointModels,
-  getVisionFallbackSettings,
   listEndpoints,
   removeEndpoint,
   saveEndpoint,
-  saveVisionFallbackSettings,
 } from "./providers/modelSync.js";
-import type { VisionFallbackInput } from "./providers/visionFallback.js";
 import {
   cancelGrokLogin,
   loginToGrok,
@@ -81,13 +72,6 @@ import {
   createTaskWorkspaceDir,
   getTaskWorkspaceRoot,
 } from "./taskWorkspace.js";
-import {
-  disablePlugin,
-  enablePlugin,
-  installPlugin,
-  listPlugins,
-  uninstallPlugin,
-} from "./plugins.js";
 import { openGrokTui } from "./openGrokTui.js";
 import { LiveSttSession } from "./voiceLiveStt.js";
 import { transcribePcm } from "./voiceStt.js";
@@ -115,7 +99,6 @@ app.on("child-process-gone", (_event, details) => {
 });
 
 let mainWindow: BrowserWindow | null = null;
-let browserMcpServer: ClientMcpStdio | null = null;
 
 type VoicePcm = ArrayBuffer | Uint8Array | number[];
 
@@ -204,62 +187,6 @@ async function listGitBranches(cwd: string): Promise<string[]> {
       },
     );
   });
-}
-
-function applyClientMcpServers(): void {
-  const servers: ClientMcpStdio[] = [];
-  if (browserMcpServer) servers.push(browserMcpServer);
-  const computerUseMcp = computerUseManager.getMcpServer();
-  if (computerUseMcp) servers.push(computerUseMcp);
-  sessionManager.setClientMcpServers(servers);
-}
-
-function emitComputerUseStatus(status: ComputerUseStatus): void {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("computer-use:status", status);
-  }
-}
-
-async function refreshComputerUse(): Promise<ComputerUseStatus> {
-  const status = await computerUseManager.probe();
-  applyClientMcpServers();
-  emitComputerUseStatus(status);
-  return status;
-}
-
-async function promptForComputerUsePermissions(
-  status: ComputerUseStatus,
-): Promise<void> {
-  if (
-    !status.enabled ||
-    !status.ready ||
-    !status.permissionsRequired ||
-    !mainWindow ||
-    mainWindow.isDestroyed()
-  ) {
-    return;
-  }
-
-  const result = await computerUseManager.checkPermissions();
-  if (result.ok && result.allowed) return;
-
-  const response = await dialog.showMessageBox(mainWindow, {
-    type: "warning",
-    title: "Open Computer Use permissions required",
-    message:
-      "Allow Accessibility and Screen Recording so Open Computer Use can control your Mac.",
-    detail:
-      "Open System Settings → Privacy & Security, enable both permissions for Grok GUI, then restart the app.",
-    buttons: ["Open System Settings", "Later"],
-    defaultId: 0,
-    cancelId: 1,
-    noLink: true,
-  });
-  if (response.response === 0) {
-    await shell.openExternal(
-      "x-apple.systempreferences:com.apple.preference.security?Privacy",
-    );
-  }
 }
 
 /** Must match renderer `--win-titlebar-height` and titleBarOverlay.height. */
@@ -926,23 +853,6 @@ function registerIpc() {
 
   ipcMain.handle("app:create-task-workspace", () => createTaskWorkspaceDir());
 
-  ipcMain.handle("computer-use:get-status", () => refreshComputerUse());
-
-  ipcMain.handle(
-    "computer-use:set-enabled",
-    async (_e, enabled: boolean) => {
-      const status = await computerUseManager.setEnabled(enabled === true);
-      applyClientMcpServers();
-      emitComputerUseStatus(status);
-      if (status.enabled) void promptForComputerUsePermissions(status);
-      return status;
-    },
-  );
-
-  ipcMain.handle("computer-use:check-permissions", () =>
-    computerUseManager.checkPermissions(),
-  );
-
   ipcMain.handle("grok:get-account", () => getGrokAccount());
 
   ipcMain.handle("grok:login", () => loginToGrok());
@@ -1016,17 +926,6 @@ function registerIpc() {
   });
 
   /**
-   * Image fallback for text-only models. Nothing about the agent's model
-   * catalog changes, so this needs no reconnect.
-   */
-  ipcMain.handle("provider:vision:get", () => getVisionFallbackSettings());
-
-  ipcMain.handle(
-    "provider:vision:save",
-    (_e, input: VisionFallbackInput) => saveVisionFallbackSettings(input),
-  );
-
-  /**
    * Open the system terminal and run the bundled interactive Grok Build TUI
    * (same pinned artifact as ACP). Optional cwd defaults to active workspace.
    */
@@ -1042,21 +941,6 @@ function registerIpc() {
   ipcMain.handle("grok:list-slash-commands", async (_e, cwd?: string | null) => {
     return listSlashCommands(cwd, sessionManager.getAvailableSlashCommands());
   });
-
-  // Plugin management (wraps `grok plugin *` CLI — agent owns install state).
-  ipcMain.handle("grok:list-plugins", async () => listPlugins());
-  ipcMain.handle("grok:install-plugin", async (_e, source: string) =>
-    installPlugin(source),
-  );
-  ipcMain.handle("grok:uninstall-plugin", async (_e, name: string) =>
-    uninstallPlugin(name),
-  );
-  ipcMain.handle("grok:enable-plugin", async (_e, name: string) =>
-    enablePlugin(name),
-  );
-  ipcMain.handle("grok:disable-plugin", async (_e, name: string) =>
-    disablePlugin(name),
-  );
 
   /** Speech-to-text: renderer sends PCM16 mono; main calls xAI STT. */
   ipcMain.handle(
@@ -1212,19 +1096,6 @@ function allowMediaPermissions() {
 
 app.whenReady().then(async () => {
   allowMediaPermissions();
-  try {
-    browserMcpServer = await startBrowserBridge(
-      path.join(__dirname, "browserMcpServer.js"),
-      (input) => sessionManager.requestLocalToolPermission(input),
-    );
-  } catch (error) {
-    console.error(
-      "[grok-gui] browser MCP bridge failed:",
-      error instanceof Error ? error.message : error,
-    );
-    browserMcpServer = null;
-  }
-  await refreshComputerUse();
   registerIpc();
   createWindow();
 
@@ -1243,7 +1114,6 @@ function cleanupWindowWork(): Promise<void> {
   if (windowWorkCleanup) return windowWorkCleanup;
   windowWorkCleanup = (async () => {
     cancelGrokLogin();
-    await stopBrowserBridge();
     await shutdownBrowser();
     shutdownTerminal();
     await sessionManager.cleanupSideTaskSessions();

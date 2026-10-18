@@ -16,11 +16,6 @@ import {
   purgeStaleScreenshotWorkspaces,
 } from "./screenshotTemp.js";
 import { ScreenshotCancelled } from "./screenshotTypes.js";
-import {
-  EXPERIMENTAL_WINDOW_SNAP,
-  listSnapWindowRectsDip,
-  type SnapWindowRect,
-} from "./screenshotWindowSnapWin32.js";
 
 type DisplayCapture = {
   display: Display;
@@ -29,7 +24,7 @@ type DisplayCapture = {
 
 /**
  * Overlay: getUserMedia desktop frame → device-pixel canvas (no freeze image files).
- * Window snap + drag select; solid selection border; crop via canvas export.
+ * Drag select; solid selection border; crop via canvas export.
  */
 function overlayHtml(displayId: number | string): string {
   const idLiteral = JSON.stringify(String(displayId));
@@ -48,18 +43,18 @@ button{width:48px;height:48px;border:0;border-radius:50%;display:inline-flex;ali
 #hint{position:absolute;top:22px;left:50%;transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:rgba(0,0,0,.7);color:#fff;font:13px "Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;pointer-events:none}
 </style></head><body><canvas id="freeze"></canvas><div id="shade"></div><div id="selection"></div>
 <div id="toolbar"><button type="button" id="cancel" title="Cancel">✕</button><button type="button" id="accept" title="Confirm">${checkSvg}</button></div>
-<div id="hint">Hover+click a window · Drag a region · After lock: Confirm or Cancel only · Esc</div><script>
+<div id="hint">Drag a region · After lock: Confirm or Cancel only · Esc</div><script>
 const canvas=document.querySelector("#freeze"),shade=document.querySelector("#shade"),selection=document.querySelector("#selection"),toolbar=document.querySelector("#toolbar");
-let displayId=${idLiteral},frozen=false,windowRects=[];
-// phase: hover | drag | locked (this display owns final pick) | blocked (another display locked)
-let phase="hover",rect=null,preview=null,press=null,ownsHover=false,claimSeq=0;
+let displayId=${idLiteral},frozen=false;
+// phase: idle | drag | locked (this display owns final pick) | blocked (another display locked)
+let phase="idle",rect=null,press=null,ownsSelection=false,claimSeq=0;
 const DRAG_THRESHOLD=4;
 const BTN=48,BTN_GAP=12,TOOLBAR_PAD=12;
 const TOOLBAR_W=BTN*2+BTN_GAP,TOOLBAR_H=BTN;
 
 function canInteract(){
   // Once any display has locked, only Confirm/Cancel remain — no re-pick or re-drag.
-  return phase==="hover"||phase==="drag";
+  return phase==="idle"||phase==="drag";
 }
 
 function sizeCanvasToDisplay(){
@@ -122,11 +117,6 @@ window.freezeFromSource=async(sourceId,pixelW,pixelH)=>{
   return {vw,vh,bw,bh,dpr,exact};
 };
 
-window.setWindowSnapRects=(rects)=>{
-  windowRects=Array.isArray(rects)?rects:[];
-  console.info("[grok-gui] window snap rects",windowRects.length);
-};
-
 window.exportCrop=(x,y,w,h,viewW,viewH)=>{
   if(!frozen)throw new Error("No freeze frame");
   const scaleX=canvas.width/viewW,scaleY=canvas.height/viewH;
@@ -149,16 +139,6 @@ function clampRect(next){
   const width=Math.max(2,Math.min(innerWidth-x,next.width));
   const height=Math.max(2,Math.min(innerHeight-y,next.height));
   return {x,y,width,height};
-}
-
-function screenHitToClient(screenX,screenY){
-  const ox=window.screenX,oy=window.screenY;
-  for(const r of windowRects){
-    if(screenX>=r.x&&screenY>=r.y&&screenX<r.x+r.width&&screenY<r.y+r.height){
-      return clampRect({x:r.x-ox,y:r.y-oy,width:r.width,height:r.height});
-    }
-  }
-  return null;
 }
 
 /**
@@ -209,28 +189,27 @@ function render(next,kind){
 }
 
 /**
- * Soft exclusive hover (pre-lock): only one display shows a window preview.
+ * Soft exclusive drag (pre-lock): only one display shows a selection.
  * Title nonce ensures Electron emits page-title-updated every claim.
  */
-function claimHoverOwnership(){
-  if(ownsHover||phase==="locked"||phase==="blocked")return;
-  ownsHover=true;
+function claimSelectionOwnership(){
+  if(ownsSelection||phase==="locked"||phase==="blocked")return;
+  ownsSelection=true;
   claimSeq+=1;
   document.title="__selection_owner__:"+displayId+":"+claimSeq;
 }
 
-function releaseHoverOwnership(){
-  ownsHover=false;
+function releaseSelectionOwnership(){
+  ownsSelection=false;
 }
 
-/** Clear hover/drag on this display (another display is hovering, or pointer left). */
+/** Clear an in-progress drag when another display takes ownership. */
 window.resetSelectionState=()=>{
   if(phase==="locked"||phase==="blocked")return;
-  phase="hover";
+  phase="idle";
   press=null;
-  preview=null;
   rect=null;
-  releaseHoverOwnership();
+  releaseSelectionOwnership();
   render(null,"none");
 };
 
@@ -242,21 +221,11 @@ window.blockFurtherSelection=()=>{
   if(phase==="locked")return;
   phase="blocked";
   press=null;
-  preview=null;
   rect=null;
-  releaseHoverOwnership();
+  releaseSelectionOwnership();
   render(null,"none");
   document.body.style.cursor="default";
 };
-
-function clearHoverOnly(){
-  if(phase!=="hover")return;
-  press=null;
-  preview=null;
-  rect=null;
-  releaseHoverOwnership();
-  render(null,"none");
-}
 
 /**
  * Finalize the sole selection on this display. After this, every display
@@ -266,46 +235,22 @@ function lockSelection(next){
   if(phase==="blocked")return;
   const r=clampRect(next);
   if(!r||r.width<3||r.height<3){
-    phase="hover";
+    phase="idle";
     press=null;
-    preview=null;
     rect=null;
-    releaseHoverOwnership();
+    releaseSelectionOwnership();
     render(null,"none");
     return;
   }
   phase="locked";
   press=null;
-  preview=null;
-  ownsHover=false;
+  ownsSelection=false;
   claimSeq+=1;
   // Hard lock: main process blocks every other overlay.
   document.title="__selection_locked__:"+displayId+":"+claimSeq;
   render(r,"locked");
   document.body.style.cursor="default";
 }
-
-function updateHoverPreview(event){
-  if(phase!=="hover"||!windowRects.length)return;
-  preview=screenHitToClient(event.screenX,event.screenY);
-  if(preview){
-    claimHoverOwnership();
-    render(preview,"preview");
-  }else if(ownsHover){
-    clearHoverOnly();
-  }else{
-    render(null,"none");
-  }
-}
-
-/** Clear hover preview when the cursor leaves this display (multi-monitor). */
-window.clearHoverPreview=()=>{
-  if(phase!=="hover"||press)return;
-  clearHoverOnly();
-};
-addEventListener("pointerleave",()=>window.clearHoverPreview());
-addEventListener("mouseleave",()=>window.clearHoverPreview());
-addEventListener("blur",()=>window.clearHoverPreview());
 
 addEventListener("mousedown",event=>{
   if(event.target.closest("#toolbar"))return;
@@ -317,13 +262,12 @@ addEventListener("mousedown",event=>{
 addEventListener("mousemove",event=>{
   if(phase==="locked"||phase==="blocked")return;
   if(press){
-    if(phase!=="hover"&&phase!=="drag")return;
+    if(phase!=="idle"&&phase!=="drag")return;
     const w=Math.abs(event.clientX-press.x),h=Math.abs(event.clientY-press.y);
     if(w>=DRAG_THRESHOLD||h>=DRAG_THRESHOLD){
       if(phase!=="drag"){
         phase="drag";
-        preview=null;
-        claimHoverOwnership();
+        claimSelectionOwnership();
       }
       render({
         x:Math.min(press.x,event.clientX),
@@ -334,7 +278,6 @@ addEventListener("mousemove",event=>{
     }
     return;
   }
-  updateHoverPreview(event);
 });
 
 addEventListener("mouseup",event=>{
@@ -354,14 +297,15 @@ addEventListener("mouseup",event=>{
         height:h
       });
     }else{
-      phase="hover";
-      updateHoverPreview(event);
+      phase="idle";
+      releaseSelectionOwnership();
+      render(null,"none");
     }
     return;
   }
-  // Click a window → lock that single pick (then Confirm/Cancel only).
-  const hit=screenHitToClient(event.screenX,event.screenY);
-  if(hit)lockSelection(hit);
+  phase="idle";
+  releaseSelectionOwnership();
+  render(null,"none");
 });
 
 function accept(){
@@ -399,25 +343,14 @@ function pairDisplaysWithSources(
   });
 }
 
-function injectSnapRects(
-  win: BrowserWindow,
-  rects: SnapWindowRect[],
-): Promise<unknown> {
-  if (win.isDestroyed()) return Promise.resolve(undefined);
-  return win.webContents.executeJavaScript(
-    `window.setWindowSnapRects(${JSON.stringify(rects)})`,
-    true,
-  );
-}
-
 export type MultiRegionOptions = {
   delayFreezeMs?: number;
 };
 
 /**
  * Windows multi-display region: getUserMedia freeze in-overlay (no freeze PNGs).
- * Pre-lock: at most one hover/drag across displays. Once locked (window pick or
- * custom region), every overlay freezes — only Confirm / Cancel remain.
+ * Pre-lock: at most one drag across displays. Once locked, every overlay
+ * freezes — only Confirm / Cancel remain.
  */
 export async function captureMultiDisplayRegion(
   options?: MultiRegionOptions,
@@ -434,11 +367,7 @@ export async function captureMultiDisplayRegion(
   const workspace = await createScreenshotWorkspace("multi-region");
   void purgeStaleScreenshotWorkspaces({ keepDir: workspace.dir });
 
-  // Concurrent with freeze/show: PowerShell window enum must not block the mask.
   const sourcesPromise = listScreenSourcesMeta();
-  const snapRectsPromise = EXPERIMENTAL_WINDOW_SNAP
-    ? listSnapWindowRectsDip()
-    : Promise.resolve([] as SnapWindowRect[]);
   const displays = screen.getAllDisplays();
   const windows: BrowserWindow[] = [];
 
@@ -457,7 +386,7 @@ export async function captureMultiDisplayRegion(
       }),
     );
 
-    // Race sources + overlays + hide grace; snap runs in parallel (not awaited here).
+    // Race sources, overlays, and hide grace.
     const [sources] = await Promise.all([
       sourcesPromise,
       readyWindows,
@@ -469,7 +398,7 @@ export async function captureMultiDisplayRegion(
     );
     const captures = pairDisplaysWithSources(displays, sources);
 
-    // getUserMedia freeze in parallel across displays; still not waiting on snap.
+    // getUserMedia freeze in parallel across displays.
     await Promise.all(
       captures.map(async ({ display, source }, index) => {
         const win = windows[index]!;
@@ -516,7 +445,7 @@ export async function captureMultiDisplayRegion(
         win.webContents.on("page-title-updated", (event, title) => {
           event.preventDefault();
           if (title === "__cancel__") return finish(new ScreenshotCancelled());
-          // Soft exclusive hover/drag (pre-lock): clear previews on other displays.
+          // Soft exclusive drag (pre-lock): clear other displays.
           if (title.startsWith("__selection_owner__:")) {
             // Format: __selection_owner__:<displayId>:<nonce>
             const ownerToken =
@@ -606,37 +535,6 @@ export async function captureMultiDisplayRegion(
       console.info(
         `[grok-gui] screenshot overlays visible: count=${windows.length} elapsed=${Math.round(performance.now() - startedAt)}ms`,
       );
-
-      // Multi-monitor: when the cursor is on display A, clear hover previews on
-      // every other overlay (mouseleave is unreliable across HWNDs).
-      const hoverSync = setInterval(() => {
-        if (settled) {
-          clearInterval(hoverSync);
-          return;
-        }
-        if (captures.length < 2) return;
-        const activeId = screen.getDisplayNearestPoint(
-          screen.getCursorScreenPoint(),
-        ).id;
-        captures.forEach(({ display }, index) => {
-          if (display.id === activeId) return;
-          const win = windows[index]!;
-          if (win.isDestroyed()) return;
-          void win.webContents
-            .executeJavaScript("window.clearHoverPreview&&window.clearHoverPreview()", true)
-            .catch(() => undefined);
-        });
-      }, 32);
-
-      void snapRectsPromise.then((snapRects) => {
-        if (settled || !snapRects.length) return;
-        console.info(
-          `[grok-gui] window snap inject: count=${snapRects.length} elapsed=${Math.round(performance.now() - startedAt)}ms`,
-        );
-        for (const win of windows) {
-          if (!win.isDestroyed()) void injectSnapRects(win, snapRects);
-        }
-      });
     });
   } finally {
     for (const win of windows) {

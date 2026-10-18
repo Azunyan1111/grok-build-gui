@@ -8,18 +8,7 @@ const KNOWN_ERRORS: Readonly<Record<string, TranslationKey>> = {
   "Not signed in": "auth.notSignedInDetail",
   "Not signed in — run `grok login` or set XAI_API_KEY.":
     "auth.notSignedInDetail",
-  "Grok binary not found": "plugins.grokBinaryNotFound",
-  "Source is required": "plugins.sourceRequired",
-  "Plugin name is required": "plugins.nameRequired",
   "Terminal is not running": "tools.terminalNotRunning",
-  "Permission check failed.": "computer.permissionCheckFailed",
-  "The built-in Open Computer Use artifact is not prepared.":
-    "computer.notPreparedDetail",
-  "Could not read the Open Computer Use version.":
-    "computer.versionReadFailed",
-  "Open Computer Use is not available.": "computer.unavailable",
-  "Could not read the Open Computer Use permission status.":
-    "computer.permissionStatusFailed",
   "Live voice is unavailable — restart the app after update.":
     "composer.voiceUnavailable",
   "Microphone permission denied.": "composer.microphoneDenied",

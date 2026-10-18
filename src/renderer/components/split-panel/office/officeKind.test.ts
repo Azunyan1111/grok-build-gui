@@ -12,7 +12,7 @@ describe("officeKindForPath", () => {
   it("classifies the formats the viewers mount", () => {
     expect(officeKindForPath("report.xlsx")).toBe("sheet");
     expect(officeKindForPath("notes.DOCX")).toBe("doc");
-    expect(officeKindForPath("deck.pptx")).toBe("slides");
+    expect(officeKindForPath("deck.pptx")).toBeNull();
     expect(officeKindForPath("src/index.ts")).toBeNull();
   });
 
@@ -24,6 +24,9 @@ describe("officeKindForPath", () => {
   it("flags legacy containers separately from previewable ones", () => {
     expect(isLegacyOfficeBinary("old.doc")).toBe(true);
     expect(isLegacyOfficeBinary("old.ppt")).toBe(true);
+    expect(isLegacyOfficeBinary("deck.pptx")).toBe(true);
+    expect(isLegacyOfficeBinary("book.xls")).toBe(true);
+    expect(isLegacyOfficeBinary("book.ods")).toBe(true);
     expect(isLegacyOfficeBinary("new.docx")).toBe(false);
   });
 

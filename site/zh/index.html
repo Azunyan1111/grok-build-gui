@@ -133,9 +133,8 @@
         从逐项确认到完全放开（YOLO）都可选。</p>
       </div>
       <div class="card">
-        <h3>可被 agent 操控的浏览器</h3>
-        <p>内置 webview 面板以 MCP 工具服务的形式暴露给 agent。每一步操作你都看得见；
-        密码输入框永远会停下来单独请求确认，且密文在权限载荷中被脱敏。</p>
+        <h3>内置浏览器</h3>
+        <p>沙箱化的 webview 面板供用户手动浏览，不会作为工具服务暴露给 agent。</p>
       </div>
       <div class="card">
         <h3>终端与文件树</h3>
@@ -163,9 +162,8 @@
         工作区选择器带最近项目和临时任务工作区。</p>
       </div>
       <div class="card">
-        <h3>账号与插件</h3>
-        <p>通过 CLI 的 OAuth 流程登录 Grok，显示账号与用量配额；
-        插件可列出、安装、启用、禁用、卸载。</p>
+        <h3>账号</h3>
+        <p>通过 CLI 的 OAuth 流程登录 Grok，显示账号与用量配额。</p>
       </div>
       <div class="card">
         <h3>中英文界面</h3>
@@ -200,10 +198,8 @@
       <li><strong>主进程 → agent。</strong>主进程拉起版本固定的
       <code>grok agent stdio</code>，通过它的 stdio 管道讲 ACP。
       会话状态、工具执行和目标循环都在 agent 里。</li>
-      <li><strong>agent → 浏览器。</strong>主进程在随机端口上启动一个带随机 32 字节 bearer token
-      的回环 HTTP 桥，然后把一个 MCP 服务描述符交给 agent。agent 把该 MCP 服务作为自己的
-      stdio 子进程拉起，子进程再把 <code>browser_*</code> 调用通过那条带鉴权的回环桥转发回来，
-      驱动你正在看的 webview。agent 从不直接接触渲染进程。</li>
+      <li><strong>浏览器。</strong>沙箱化的 webview 是面向用户的 GUI 面板，
+      不会注入到 agent 会话中。</li>
       <li><strong>两层安全。</strong>应用层权限（ACP <code>request_permission</code> → GUI 弹窗）
       是这个应用实现的那一层。可选的操作系统沙箱（Seatbelt/Landlock）由 agent 强制执行，
       违反时直接以 <code>EPERM</code> 失败。</li>
@@ -252,8 +248,7 @@ cd grok-build-gui
     Linux 的平台标识已在运行时清单中预留，但在固定产物 URL、大小和 SHA-256 校验值补齐并验证之前仍不受支持。</p>
 
     <h3>免费吗？</h3>
-    <p>免费。GUI 采用 MIT 许可。随包的 Grok Build 产物是 Apache-2.0 并附带上游及第三方声明；
-    Open Computer Use 0.2.1 是 MIT 许可。</p>
+    <p>免费。GUI 采用 MIT 许可。随包的 Grok Build 产物是 Apache-2.0 并附带上游及第三方声明。</p>
 
     <h3>怎么防止 agent 做出你不想要的操作？</h3>
     <p>agent 标记的每一次工具调用都会走 ACP 权限请求，在界面上表现为一个逐次允许或拒绝的弹窗。

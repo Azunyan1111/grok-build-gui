@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import type { OfficeDocument } from "../../../../electron/office/types";
 import { DocView } from "./DocView";
 import { SheetView } from "./SheetView";
-import { SlidesView } from "./SlidesView";
 import { officeKindForPath } from "./officeKind";
 
 type Props = {
@@ -15,7 +14,7 @@ type Props = {
 /**
  * Loads an Office file through the main-process parser and mounts the viewer
  * for its kind. Also the fallback surface for formats we cannot parse
- * (legacy .doc/.ppt), where the only useful action is handing the file to the OS.
+ * where the only useful action is handing the file to the OS.
  */
 export function OfficeView({ root, path }: Props) {
   const { t } = useTranslation();
@@ -122,8 +121,6 @@ export function OfficeView({ root, path }: Props) {
         />
       ) : doc?.kind === "doc" ? (
         <DocView doc={doc} />
-      ) : doc?.kind === "slides" ? (
-        <SlidesView doc={doc} />
       ) : !error ? (
         <div className="office-empty">{t("tools.noContent")}</div>
       ) : null}

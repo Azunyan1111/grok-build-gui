@@ -7,7 +7,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { BROWSER_SLASH_COMMAND } from "../../lib/browserSlash";
-import { COMPUTER_SLASH_COMMAND } from "../../lib/computerSlash";
 import { useTranslation } from "react-i18next";
 import { localizeUiError } from "../../lib/uiError";
 import {
@@ -20,7 +19,7 @@ import {
 /** Always merge GUI builtins so `/browser` appears even before inspect returns. */
 function withBuiltins(commands: SlashCommand[]): SlashCommand[] {
   const seen = new Set(commands.map((c) => c.name.toLowerCase()));
-  const extras = [BROWSER_SLASH_COMMAND, COMPUTER_SLASH_COMMAND].filter(
+  const extras = [BROWSER_SLASH_COMMAND].filter(
     (c) => !seen.has(c.name.toLowerCase()),
   );
   if (extras.length === 0) return commands;
@@ -33,8 +32,6 @@ type Options = {
   /** Workspace cwd for `grok inspect` discovery. */
   cwd?: string;
   disabled?: boolean;
-  /** Bump to drop cache and re-fetch (plugin install/enable). */
-  refreshKey?: number;
   /** Focus textarea after applying a command (selection at end). */
   focusInput?: () => void;
 };
@@ -48,7 +45,6 @@ export function useSlashCommands({
   onChange,
   cwd,
   disabled,
-  refreshKey = 0,
   focusInput,
 }: Options) {
   const { t } = useTranslation();
@@ -64,10 +60,10 @@ export function useSlashCommands({
   );
   const fetchGen = useRef(0);
 
-  // Drop skill cache when plugins change.
+  // Drop the inspect cache when the agent publishes a new command catalog.
   useEffect(() => {
     cacheRef.current = null;
-  }, [refreshKey, agentCommandRevision]);
+  }, [agentCommandRevision]);
 
   // ACP publishes core commands (including /goal) per real session. Invalidate
   // a cwd-only inspect cache as soon as that authoritative list arrives.
