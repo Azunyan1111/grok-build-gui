@@ -31,6 +31,10 @@ import {
   type PermissionMode,
   type PermissionProfile,
 } from "./permissionProfiles.js";
+import {
+  loadSessionRequest,
+  newSessionRequest,
+} from "./sessionRequests.js";
 
 export type { PermissionMode, PermissionProfile } from "./permissionProfiles.js";
 
@@ -1893,17 +1897,12 @@ export class SessionManager {
       // Do not cancel other sessions' in-flight turns when creating a new chat.
       const response = (await runtime.connection.agent.request(
         acp.methods.agent.session.new,
-        {
-          cwd: targetCwd,
-          // ACP requires the field even when the client exposes no MCP servers.
-          mcpServers: [],
-          // Agent reads `yoloMode` + `autoMode` booleans (not only permission_mode).
-          // `sessionId` is honoured for new sessions, which is what lets the
-          // worktree registry row point at the chat we are about to open.
-          _meta: presetSessionId
+        newSessionRequest(
+          targetCwd,
+          presetSessionId
             ? { ...permissionMeta(profile.approval), sessionId: presetSessionId }
             : permissionMeta(profile.approval),
-        } satisfies acp.NewSessionRequest,
+        ),
       )) as {
         sessionId: string;
         models?: unknown;
@@ -2074,14 +2073,7 @@ export class SessionManager {
 
       const response = (await runtime.connection.agent.request(
         acp.methods.agent.session.load,
-        {
-          sessionId,
-          cwd,
-          // ACP requires the field even when the client exposes no MCP servers.
-          mcpServers: [],
-          // Re-seed yolo/auto for this session on reconnect (CLI-compatible).
-          _meta: permissionMeta(profile.approval),
-        } satisfies acp.LoadSessionRequest,
+        loadSessionRequest(sessionId, cwd, permissionMeta(profile.approval)),
       )) as {
         models?: unknown;
       };

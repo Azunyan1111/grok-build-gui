@@ -84,6 +84,32 @@ function buildTemplate(): MenuItemConstructorOptions[] {
   ];
 }
 
+export function buildMacApplicationMenuTemplate(): MenuItemConstructorOptions[] {
+  return [
+    {
+      label: "Grok GUI",
+      submenu: [
+        { role: "about" },
+        { type: "separator" },
+        { role: "services" },
+        { type: "separator" },
+        { role: "hide" },
+        { role: "hideOthers" },
+        { role: "unhide" },
+        { type: "separator" },
+        { role: "quit", accelerator: "Command+Q" },
+      ],
+    },
+    ...buildTemplate(),
+  ];
+}
+
+export function installMacApplicationMenu(): void {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(buildMacApplicationMenuTemplate()),
+  );
+}
+
 /** Install the app menu (accelerators). On Windows the bar itself stays hidden. */
 export function installWindowsAppMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(buildTemplate()));

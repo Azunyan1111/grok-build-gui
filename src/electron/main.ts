@@ -18,10 +18,12 @@ import {
   type WorktreeCreateOptions,
 } from "./acp/sessionManager.js";
 import {
+  installMacApplicationMenu,
   installWindowsAppMenu,
   isAppMenuId,
   popupAppMenu,
 } from "./appMenu.js";
+import { createBeforeQuitHandler } from "./appQuit.js";
 import {
   attachBrowserWindow,
   registerBrowserIpc,
@@ -1025,6 +1027,7 @@ function allowMediaPermissions() {
 app.whenReady().then(async () => {
   allowMediaPermissions();
   registerIpc();
+  if (process.platform === "darwin") installMacApplicationMenu();
   createWindow();
 
   // Startup check, deferred so it never competes with first paint or the
@@ -1056,9 +1059,6 @@ async function cleanupAppWork(): Promise<void> {
   await cleanupWindowWork();
 }
 
-let allowQuit = false;
-let quitCleanup: Promise<void> | null = null;
-
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -1069,12 +1069,7 @@ app.on("window-all-closed", () => {
   void cleanupWindowWork();
 });
 
-app.on("before-quit", (event) => {
-  if (allowQuit) return;
-  event.preventDefault();
-  if (quitCleanup) return;
-  quitCleanup = cleanupAppWork().finally(() => {
-    allowQuit = true;
-    app.quit();
-  });
-});
+app.on(
+  "before-quit",
+  createBeforeQuitHandler(cleanupAppWork, () => app.quit()),
+);

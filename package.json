@@ -30,6 +30,7 @@
     "package:win": "node scripts/release-win.mjs",
     "preview": "vite preview --config config/vite.config.ts",
     "test": "vitest run --config config/vite.config.ts --root .",
+    "test:live:grok": "node scripts/test-live-grok.mjs",
     "typecheck": "tsc -p config/tsconfig.renderer.json --noEmit && tsc -p config/tsconfig.electron.json --noEmit"
   },
   "dependencies": {
